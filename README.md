@@ -4,12 +4,12 @@ A discord bot for Project Zomboid. You are welcome to [log](https://github.com/J
 
 ## Features
 - Chat
- - Mirror in-game chat messages to discord channel
- - If in-game name matches Discord name it will use the name and avatar
- - TODO: Mirror discord messages in-game
+    - Mirror in-game chat messages to discord channel
+    - If in-game name matches Discord name it will use the name and avatar
+    - TODO: Mirror discord messages in-game
 - Notifications
- - Logins
- - Deaths
+    - Logins
+    - Deaths
 
 ## Commands (prefix: `!`):
 ```
