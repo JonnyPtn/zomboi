@@ -3,13 +3,9 @@
 A discord bot for Project Zomboid. You are welcome to [log](https://github.com/JonnyPtn/zomboi/issues) any issues, questions, or feature suggestions you have
 
 ## Features
-- Chat
-    - Mirror in-game chat messages to discord channel
-    - If in-game name matches Discord name it will use the name and avatar
-    - TODO: Mirror discord messages in-game
-- Notifications
-    - Logins
-    - Deaths
+- Mirror in-game chat messages to discord channel using linked discord name/avatar
+- Notifications for logins and deaths
+- Presence shows number of players currently online
 
 ## Commands (prefix: `!`):
 ```

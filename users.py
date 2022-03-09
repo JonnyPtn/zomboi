@@ -1,6 +1,7 @@
 import config
 from dataclasses import dataclass, field
 from datetime import datetime
+import discord
 from discord.ext import tasks, commands
 from file_read_backwards import FileReadBackwards
 import glob
@@ -58,6 +59,7 @@ class UserHandler(commands.Cog):
         self.users = {}
         self.loadHistory()
         self.update.start()
+        self.onlineCount = None
 
     def getUser(self, name: str):
         """Get a user from a name, will create if it doesn't exist"""
@@ -86,6 +88,13 @@ class UserHandler(commands.Cog):
                 else:
                     break
             self.lastUpdateTimestamp = newTimestamp
+
+        # Also update the bot activity here
+        onlineCount = len([user for user in self.users if self.users[user].online])
+        if onlineCount != self.onlineCount:
+            playerString = "nobody" if onlineCount == 0 else f"{onlineCount} survivors"
+            await self.bot.change_presence(activity=discord.Game(f"PZ with {playerString}")) # have to abbreviate or it gets truncated
+            self.onlineCount = onlineCount
 
     def loadHistory(self):
         """Go through all log files and load the info"""
