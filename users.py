@@ -116,7 +116,7 @@ class UserHandler(commands.Cog):
 
     @commands.command()
     async def users(self,ctx):
-        """Return a list of users on the server"""
+        """Return a list of users on the server with basic info"""
         table = [["Name", "Online", "Last Seen", "Hours survived"]]
         for user in self.users.values():
             table.append([user.name, "Yes" if user.online else "No",
@@ -125,7 +125,10 @@ class UserHandler(commands.Cog):
 
     @commands.command()
     async def info(self, ctx, name=None):
-        """Get your user info"""
+        """Get detailed user info
+        
+        Provide a username, or leave blank to show the user matching your discord name
+        """
         if name is None:
             name = ctx.author.name
         if name in self.users:
