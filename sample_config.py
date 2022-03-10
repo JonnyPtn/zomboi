@@ -7,5 +7,5 @@ token = "DISCORD_BOT_TOKEN"
 # - C:/Users/<user>/Zomboid/Logs on Windows
 logPath = ""
 
-# The id for the channel you want notifications
-notificationChannel = "123456789"
+# The id for the channel you want notifications and chat
+channel = None

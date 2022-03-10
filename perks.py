@@ -32,8 +32,8 @@ class PerkHandler(commands.Cog):
                         newTimestamp = timestamp
                     if timestamp > self.lastUpdateTimestamp:
                         message = self.handleLog(timestamp,message)
-                        if message is not None:
-                            await self.bot.get_channel(config.notificationChannel).send(message)
+                        if message is not None and self.bot.channel is not None:
+                            await self.bot.channel.send(message)
                     else:
                         break
                 self.lastUpdateTimestamp = newTimestamp
@@ -76,17 +76,25 @@ class PerkHandler(commands.Cog):
                 user.died.append(timestamp)
                 if timestamp > user.lastSeen:
                     user.lastSeen = timestamp
-                    return f":zombie: {user.name} died after surviving {user.hoursAlive} hours :dizzy_face:"
+                    if timestamp > self.lastUpdateTimestamp:
+                        self.bot.log.info(f"{user.name} died")
+                        return f":zombie: {user.name} died after surviving {user.hoursAlive} hours :dizzy_face:"
             case "Login":
                 if timestamp > user.lastSeen:
                     user.online = True
                     user.lastSeen = timestamp
-                    return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
+                    if timestamp > self.lastUpdateTimestamp:
+                        self.bot.log.info(f"{user.name} login")
+                        return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
             case "Level Changed":
                 for perk in user.perks:
                     if perk in message:
                         match = re.search(r'\[(\d+)\]',message)
-                        user.perks[perk] = match.group(1)
+                        level = match.group(1)
+                        user.perks[perk] = level
+                        if timestamp > self.lastUpdateTimestamp:
+                            self.bot.log.info(f"{user.name} {perk} changed to {level}")
+                            return f":chart_with_upward_trend: {user.name} reached {perk} level {level}"
             case _:
                 # Must be a list of perks following a login/player creation
                 for perk in user.perks:

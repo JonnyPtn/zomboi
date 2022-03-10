@@ -50,19 +50,18 @@ class ChatHandler(commands.Cog):
         # Mirror any other received messages in the discord chat
         pattern = r'] Message.*author=\'(.*)\', text=\'(.*)\''
         match = re.search(pattern, message)
-        if match:
+        if match and self.bot.channel is not None:
             # Use a webhook to make it look like we're the discord member
             # God bless stack overflow
             name = match.group(1)
             avatar_url = None
-            channel = self.bot.get_channel(config.notificationChannel)
             for member in self.bot.get_all_members():
                 if match.group(1) in member.name:
                     avatar_url = member.avatar_url
-            webhook = await channel.create_webhook(name=name)
+            webhook = await self.bot.channel.create_webhook(name=name)
             await webhook.send(
                 str(match.group(2)), username=name, avatar_url=avatar_url)
 
-            webhooks = await channel.webhooks()
+            webhooks = await self.bot.channel.webhooks()
             for webhook in webhooks:
                     await webhook.delete()

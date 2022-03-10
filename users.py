@@ -119,6 +119,11 @@ class UserHandler(commands.Cog):
                 user.lastSeen = timestamp
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} disconnected")
+        elif "fully connected" in message:
+            name = re.search(r'\"(.*)\"', message).group(1)
+            user = self.getUser(name)
+            if timestamp > self.lastUpdateTimestamp:
+                self.bot.log.info(f"{user.name} connected")
         else:
             # Ignore but mirror log if it's new
             if timestamp > self.lastUpdateTimestamp:
