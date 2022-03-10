@@ -52,7 +52,7 @@ async def on_ready():
     zomboi.channel = zomboi.get_channel(config.channel)
     if zomboi.channel is None:
         zomboi.log.warning('Unable to get channel, will not be enabled')
-    else
+    else:
         zomboi.log.info('channel connected')
     zomboi.add_cog(UserHandler(zomboi))
     zomboi.add_cog(ChatHandler(zomboi))
