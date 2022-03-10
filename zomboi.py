@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from perks import PerkHandler
 from users import UserHandler
+from rcon_adapter import RCONAdapter
 
 # Verify the log path
 if len(config.logPath) == 0:
@@ -57,6 +58,7 @@ async def on_ready():
     zomboi.add_cog(UserHandler(zomboi))
     zomboi.add_cog(ChatHandler(zomboi))
     zomboi.add_cog(PerkHandler(zomboi))
+    zomboi.add_cog(RCONAdapter(zomboi))
 
 # Always finally run the bot
 zomboi.run(config.token)

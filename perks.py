@@ -94,7 +94,7 @@ class PerkHandler(commands.Cog):
                         user.perks[perk] = level
                         if timestamp > self.lastUpdateTimestamp:
                             self.bot.log.info(f"{user.name} {perk} changed to {level}")
-                            return f":chart_with_upward_trend: {user.name} reached {perk} level {level}"
+                            return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
             case _:
                 # Must be a list of perks following a login/player creation
                 for perk in user.perks:

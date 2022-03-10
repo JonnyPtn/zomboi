@@ -9,3 +9,6 @@ logPath = ""
 
 # The id for the channel you want notifications and chat
 channel = None
+
+# The password for rcon on the server (used to relay chat from discord to game)
+rconPassword = None
