@@ -23,19 +23,20 @@ class PerkHandler(commands.Cog):
     @tasks.loop(seconds=2)
     async def update(self):
         files = glob.glob(config.logPath + "/*PerkLog.txt")
-        with FileReadBackwards(files[0]) as f:
-            newTimestamp = self.lastUpdateTimestamp
-            for line in f:
-                timestamp,message = self.splitLine(line)
-                if timestamp > newTimestamp:
-                    newTimestamp = timestamp
-                if timestamp > self.lastUpdateTimestamp:
-                    message = self.handleLog(timestamp,message)
-                    if message is not None:
-                        await self.bot.get_channel(config.notificationChannel).send(message)
-                else:
-                    break
-            self.lastUpdateTimestamp = newTimestamp
+        if len(files) > 0:
+            with FileReadBackwards(files[0]) as f:
+                newTimestamp = self.lastUpdateTimestamp
+                for line in f:
+                    timestamp,message = self.splitLine(line)
+                    if timestamp > newTimestamp:
+                        newTimestamp = timestamp
+                    if timestamp > self.lastUpdateTimestamp:
+                        message = self.handleLog(timestamp,message)
+                        if message is not None:
+                            await self.bot.get_channel(config.notificationChannel).send(message)
+                    else:
+                        break
+                self.lastUpdateTimestamp = newTimestamp
 
     # Load the history from the files up until the last update time
     def loadHistory(self):

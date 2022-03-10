@@ -26,18 +26,19 @@ class ChatHandler(commands.Cog):
 
         This will check the latest log file and update our data based on any new entries
         """
-        file = glob.glob(config.logPath + "/*chat.txt")
-        with FileReadBackwards(file[0]) as f:
-            newTimestamp = self.lastUpdateTimestamp
-            for line in f:
-                timestamp, message = self.splitLine(line)
-                if timestamp > newTimestamp:
-                    newTimestamp = timestamp
-                if timestamp > self.lastUpdateTimestamp:
-                    await self.handleLog(timestamp, message)
-                else:
-                    break
-            self.lastUpdateTimestamp = newTimestamp
+        files = glob.glob(config.logPath + "/*chat.txt")
+        if len(files) > 0:
+            with FileReadBackwards(files[0]) as f:
+                newTimestamp = self.lastUpdateTimestamp
+                for line in f:
+                    timestamp, message = self.splitLine(line)
+                    if timestamp > newTimestamp:
+                        newTimestamp = timestamp
+                    if timestamp > self.lastUpdateTimestamp:
+                        await self.handleLog(timestamp, message)
+                    else:
+                        break
+                self.lastUpdateTimestamp = newTimestamp
 
     async def handleLog(self, timestamp: datetime, message: str):
         """Parse the given line from the logfile and mirror chat message in discord if necessary"""

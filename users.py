@@ -77,17 +77,18 @@ class UserHandler(commands.Cog):
     async def update(self):
         """Update from the log file anything since the last update"""
         files = glob.glob(config.logPath + "/*user.txt")
-        with FileReadBackwards(files[0]) as f:
-            newTimestamp = self.lastUpdateTimestamp
-            for line in f:
-                timestamp, message = self.splitLine(line)
-                if timestamp > newTimestamp:
-                    newTimestamp = timestamp
-                if timestamp > self.lastUpdateTimestamp:
-                    self.handleLog(timestamp, message)
-                else:
-                    break
-            self.lastUpdateTimestamp = newTimestamp
+        if len(files) > 0:
+            with FileReadBackwards(files[0]) as f:
+                newTimestamp = self.lastUpdateTimestamp
+                for line in f:
+                    timestamp, message = self.splitLine(line)
+                    if timestamp > newTimestamp:
+                        newTimestamp = timestamp
+                    if timestamp > self.lastUpdateTimestamp:
+                        self.handleLog(timestamp, message)
+                    else:
+                        break
+                self.lastUpdateTimestamp = newTimestamp
 
         # Also update the bot activity here
         onlineCount = len([user for user in self.users if self.users[user].online])
