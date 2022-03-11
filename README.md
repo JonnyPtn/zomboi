@@ -6,12 +6,17 @@ A discord bot for Project Zomboid. You are welcome to [log](https://github.com/J
 - Mirror in-game chat messages to discord channel using linked discord name/avatar
 - Notifications for logins and deaths
 - Presence shows number of players currently online
+- View and change server options
 
 ## Commands (prefix: `!`):
 ```
+RCONAdapter:
+  option Show or set the value of a server option
 UserHandler:
-  info  Get your user info
-  users Return a list of users on the server
+  info   Get detailed user info
+  users  Return a list of users on the server with basic info
+​No Category:
+  help   Shows this message
 ```
 
 ## Requirements
