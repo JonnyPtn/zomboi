@@ -21,19 +21,23 @@ class RCONAdapter(commands.Cog):
     #    await ctx.send(f"> {message}")
 
     @commands.command()
-    async def option(self,ctx, option : str):
-        """Show the value of a server option"""
-        message = run_rcon("showoptions")
-        message = message.splitlines()
-        regex = re.compile(f".*{option}.*",flags=re.IGNORECASE)
-        message = list(filter(regex.match,message))
-        message = "\n".join(message)
-        try:
-            if len(message):
-                await ctx.send(f"```\n{message}\n```")
-            else:
-                await ctx.send("No matches found")
-        except:
-            await ctx.send("Unable to send message")
+    async def option(self,ctx, option : str, newValue : str = None):
+        """Show or set the value of a server option"""
+        if newValue is not None:
+            result = run_rcon(f"changeoption {option} {newValue}")
+            await ctx.send(f"`{result}`")
+        else:
+            message = run_rcon("showoptions")
+            message = message.splitlines()
+            regex = re.compile(f".*{option}.*",flags=re.IGNORECASE)
+            message = list(filter(regex.match,message))
+            message = "\n".join(message)
+            try:
+                if len(message):
+                    await ctx.send(f"```\n{message}\n```")
+                else:
+                    await ctx.send("No matches found")
+            except:
+                await ctx.send("Unable to send message")
 
    
