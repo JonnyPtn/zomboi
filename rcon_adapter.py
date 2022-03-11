@@ -1,6 +1,7 @@
 import config
 from discord.ext import tasks, commands
 from rcon.source import Client, rcon
+import re
 
 def run_rcon(command):
     """Run the given rcon command"""
@@ -24,9 +25,15 @@ class RCONAdapter(commands.Cog):
         """Show the value of a server option"""
         message = run_rcon("showoptions")
         message = message.splitlines()
-        lower = [o for o in message if option.lower() in o]
-        upper = [o for o in message if option.upper() in o]
-        cap = [o for o in message if option.capitalize() in o]
-        message = "\n".join(lower + upper + cap)
-        await ctx.send(f"```\n{message}\n```")
+        regex = re.compile(f".*{option}.*",flags=re.IGNORECASE)
+        message = list(filter(regex.match,message))
+        message = "\n".join(message)
+        try:
+            if len(message):
+                await ctx.send(f"```\n{message}\n```")
+            else:
+                await ctx.send("No matches found")
+        except:
+            await ctx.send("Unable to send message")
+
    

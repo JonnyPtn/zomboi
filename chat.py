@@ -13,6 +13,7 @@ class ChatHandler(commands.Cog):
         self.bot = bot
         self.lastUpdateTimestamp = datetime.now()
         self.update.start()
+        self.webhook = None
 
     def splitLine(self, line: str):
         """Split a log line into a timestamp and the remaining message"""
@@ -53,15 +54,15 @@ class ChatHandler(commands.Cog):
         if match and self.bot.channel is not None:
             # Use a webhook to make it look like we're the discord member
             # God bless stack overflow
+            if self.bot.channel:
+                for webhook in await self.bot.channel.webhooks():
+                    if webhook.user == self.bot.user:
+                        self.webhook = webhook
+            if self.webhook is None:
+                self.webhook = await self.bot.channel.create_webhook(name="zomboi")
             name = match.group(1)
             avatar_url = None
             for member in self.bot.get_all_members():
                 if match.group(1) in member.name:
                     avatar_url = member.avatar_url
-            webhook = await self.bot.channel.create_webhook(name=name)
-            await webhook.send(
-                str(match.group(2)), username=name, avatar_url=avatar_url)
-
-            webhooks = await self.bot.channel.webhooks()
-            for webhook in webhooks:
-                    await webhook.delete()
+            await self.webhook.send(match.group(2), username=name, avatar_url=avatar_url)
