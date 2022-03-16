@@ -7,6 +7,7 @@ A discord bot for Project Zomboid. You are welcome to [log](https://github.com/J
 - Notifications for logins and deaths
 - Presence shows number of players currently online
 - View and change server options
+- Request a map showing a players location
 
 ## Commands (prefix: `!`):
 ```
