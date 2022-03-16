@@ -2,3 +2,4 @@ discord
 file-read-backwards
 watchdog
 tabulate
+pillow

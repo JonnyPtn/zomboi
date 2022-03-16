@@ -5,6 +5,7 @@ import config
 import discord
 from discord.ext import tasks, commands
 import logging
+from maps import MapHandler
 from pathlib import Path
 from perks import PerkHandler
 from users import UserHandler
@@ -59,6 +60,7 @@ async def on_ready():
     zomboi.add_cog(ChatHandler(zomboi))
     zomboi.add_cog(PerkHandler(zomboi))
     zomboi.add_cog(RCONAdapter(zomboi))
+    zomboi.add_cog(MapHandler(zomboi))
 
 # Always finally run the bot
 zomboi.run(config.token)

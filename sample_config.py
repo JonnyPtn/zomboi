@@ -12,3 +12,8 @@ channel = None
 
 # The password for rcon on the server (used to relay chat from discord to game)
 rconPassword = None
+
+# Path to the project zomboid maps folder
+# leave empty to try the default location, which will look for both
+# dedicated server and regular game files
+mapsPath = ""

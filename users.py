@@ -49,6 +49,7 @@ class User:
     perks: dict = field(default_factory=lambda: empty_perkset)
     online: bool = False
     lastSeen: datetime = datetime(1, 1, 1)
+    lastLocation: tuple = (0,0)
     died: list[datetime] = field(default_factory=lambda: [])
 
 
@@ -121,10 +122,13 @@ class UserHandler(commands.Cog):
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} disconnected")
         elif "fully connected" in message:
-            name = re.search(r'\"(.*)\"', message).group(1)
+            matches = re.search(r'\"(.*)\".*\((\d+),(\d+)', message)
+            name = matches.group(1)
             user = self.getUser(name)
             if timestamp > user.lastSeen:
                 user.online = True
+                user.lastSeen = timestamp
+                user.lastLocation = (matches.group(2),matches.group(3))
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} connected")
         else:
