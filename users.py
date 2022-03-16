@@ -45,6 +45,7 @@ class User:
     """A class representing a user"""
     name: str
     hoursAlive: int = 0
+    recordHoursAlive: int = 0
     perks: dict = field(default_factory=lambda: empty_perkset)
     online: bool = False
     lastSeen: datetime = datetime(1, 1, 1)
@@ -150,7 +151,7 @@ class UserHandler(commands.Cog):
             user = self.users[name]
             table = []
             table.append(["Name", user.name])
-            table.append(["Hours survived", user.hoursAlive])
+            table.append(["Hours survived", f"{user.hoursAlive} (record: {user.recordHoursAlive})"])
             table.append(["Online", "Yes" if user.online else "No"])
             table.append(["Last Seen", user.lastSeen.strftime("%d/%m at %H:%M")])
             table.append(["Deaths", len(user.died)])

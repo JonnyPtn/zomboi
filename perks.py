@@ -70,6 +70,8 @@ class PerkHandler(commands.Cog):
         # All these logs should include hours survived
         hours = re.search(r'Hours Survived: (\d+)',message).group(1)
         user.hoursAlive = hours
+        if int(hours) > int(user.recordHoursAlive):
+            user.recordHoursAlive = hours
 
         match type:
             case "Died":
