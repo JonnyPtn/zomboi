@@ -123,6 +123,8 @@ class UserHandler(commands.Cog):
         elif "fully connected" in message:
             name = re.search(r'\"(.*)\"', message).group(1)
             user = self.getUser(name)
+            if timestamp > user.lastSeen:
+                user.online = True
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} connected")
         else:
