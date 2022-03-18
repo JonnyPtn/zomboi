@@ -112,13 +112,15 @@ class UserHandler(commands.Cog):
 
     def handleLog(self, timestamp: datetime, message: str):
         """Parse the log message and store any useful info. Returns a message string if relevant"""
-        # We only care about disconnects from the user file as we get login/deaths from the perklog
+
         if "disconnected" in message:
-            name = re.search(r'\"(.*)\"', message).group(1)
+            matches = re.search(r'\"(.*)\".*\((\d+),(\d+),\d+\)', message)
+            name = matches.group(1)
             user = self.getUser(name)
             if timestamp > user.lastSeen:
                 user.online = False
                 user.lastSeen = timestamp
+                user.lastLocation = (matches.group(2),matches.group(3))
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} disconnected")
         elif "fully connected" in message:

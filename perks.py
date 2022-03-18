@@ -61,8 +61,14 @@ class PerkHandler(commands.Cog):
         name, message = message.split("]",1)
         user = self.bot.get_cog('UserHandler').getUser(name)
 
-        # Then (I think) position? which we will handle at some point, for now ignore
+        # Then position which we set if it's more recent
+        x = message[1:message.find(",")]
+        y = message[message.find(",") + 1:message.find(",",message.find(",") + 1)]
         message = message[message.find("[",2) + 1:]
+
+        if timestamp > user.lastSeen:
+            user.lastSeen = timestamp
+            user.lastLocation = (x,y)
 
         # Then the message type, can be "Died", "Login", "Level Changed" or a list of perks
         type, message = message.split("]",1)
@@ -76,18 +82,14 @@ class PerkHandler(commands.Cog):
         match type:
             case "Died":
                 user.died.append(timestamp)
-                if timestamp > user.lastSeen:
-                    user.lastSeen = timestamp
-                    if timestamp > self.lastUpdateTimestamp:
-                        self.bot.log.info(f"{user.name} died")
-                        return f":zombie: {user.name} died after surviving {user.hoursAlive} hours :dizzy_face:"
+                if timestamp > self.lastUpdateTimestamp:
+                    self.bot.log.info(f"{user.name} died")
+                    return f":zombie: {user.name} died after surviving {user.hoursAlive} hours :dizzy_face:"
             case "Login":
-                if timestamp > user.lastSeen:
+                if timestamp > self.lastUpdateTimestamp:
                     user.online = True
-                    user.lastSeen = timestamp
-                    if timestamp > self.lastUpdateTimestamp:
-                        self.bot.log.info(f"{user.name} login")
-                        return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
+                    self.bot.log.info(f"{user.name} login")
+                    return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
             case "Level Changed":
                 for perk in user.perks:
                     if perk in message:
