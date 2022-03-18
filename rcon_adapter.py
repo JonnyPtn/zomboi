@@ -11,7 +11,6 @@ def run_rcon(command):
 class RCONAdapter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        bot.log.debug(run_rcon("help"))
 
     #@commands.command()
     #async def options(self,ctx):
