@@ -72,9 +72,9 @@ class MapHandler(commands.Cog):
                                 points = []
                                 for point in coordinates.findall("point"):
                                     points.append((int(point.get("x")),int(point.get("y"))))
-                    for properties in feature.findall("properties"):
-                        for property in properties.findall("property"):
-                            draw.polygon(points, fill=colours[property.get("value")])
+                            for properties in feature.findall("properties"):
+                                for property in properties.findall("property"):
+                                    draw.polygon(points, fill=colours[property.get("value")])
 
         draw.polygon(((posX-1, posY-1),(posX+1,posY-1),(posX+1,posY+1),(posX-1,posY+1)),(255,0,0))
 
