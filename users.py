@@ -46,7 +46,7 @@ class User:
     name: str
     hoursAlive: int = 0
     recordHoursAlive: int = 0
-    perks: dict = field(default_factory=lambda: empty_perkset)
+    perks: dict = field(default_factory=lambda: dict(empty_perkset))
     online: bool = False
     lastSeen: datetime = datetime(1, 1, 1)
     lastLocation: tuple = (0,0)
