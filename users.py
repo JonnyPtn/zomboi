@@ -49,12 +49,13 @@ class User:
     perks: dict = field(default_factory=lambda: dict(empty_perkset))
     online: bool = False
     lastSeen: datetime = datetime(1, 1, 1)
-    lastLocation: tuple = (0,0)
+    lastLocation: tuple = (0, 0)
     died: list[datetime] = field(default_factory=lambda: [])
 
 
 class UserHandler(commands.Cog):
     """Handles all the info we get from the user log files"""
+
     def __init__(self, bot):
         self.bot = bot
         self.lastUpdateTimestamp = datetime.now()
@@ -93,10 +94,12 @@ class UserHandler(commands.Cog):
                 self.lastUpdateTimestamp = newTimestamp
 
         # Also update the bot activity here
-        onlineCount = len([user for user in self.users if self.users[user].online])
+        onlineCount = len(
+            [user for user in self.users if self.users[user].online])
         if onlineCount != self.onlineCount:
             playerString = "nobody" if onlineCount == 0 else f"{onlineCount} survivors"
-            await self.bot.change_presence(activity=discord.Game(f"PZ with {playerString}")) # have to abbreviate or it gets truncated
+            # have to abbreviate or it gets truncated
+            await self.bot.change_presence(activity=discord.Game(f"PZ with {playerString}"))
             self.onlineCount = onlineCount
 
     def loadHistory(self):
@@ -120,7 +123,7 @@ class UserHandler(commands.Cog):
             if timestamp > user.lastSeen:
                 user.online = False
                 user.lastSeen = timestamp
-                user.lastLocation = (matches.group(2),matches.group(3))
+                user.lastLocation = (matches.group(2), matches.group(3))
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} disconnected")
         elif "fully connected" in message:
@@ -130,7 +133,7 @@ class UserHandler(commands.Cog):
             if timestamp > user.lastSeen:
                 user.online = True
                 user.lastSeen = timestamp
-                user.lastLocation = (matches.group(2),matches.group(3))
+                user.lastLocation = (matches.group(2), matches.group(3))
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} connected")
         else:
@@ -139,18 +142,18 @@ class UserHandler(commands.Cog):
                 self.bot.log.debug(f"Ignored: {message}")
 
     @commands.command()
-    async def users(self,ctx):
+    async def users(self, ctx):
         """Return a list of users on the server with basic info"""
         table = [["Name", "Online", "Last Seen", "Hours survived"]]
         for user in self.users.values():
             table.append([user.name, "Yes" if user.online else "No",
-                        user.lastSeen.strftime("%d/%m at %H:%M"), user.hoursAlive])
+                          user.lastSeen.strftime("%d/%m at %H:%M"), user.hoursAlive])
         await ctx.send(f'```\n{tabulate(table,headers="firstrow", tablefmt="fancy_grid")}\n```')
 
     @commands.command()
     async def info(self, ctx, name=None):
         """Get detailed user info
-        
+
         Provide a username, or leave blank to show the user matching your discord name
         """
         if name is None:
@@ -159,9 +162,11 @@ class UserHandler(commands.Cog):
             user = self.users[name]
             table = []
             table.append(["Name", user.name])
-            table.append(["Hours survived", f"{user.hoursAlive} (record: {user.recordHoursAlive})"])
+            table.append(
+                ["Hours survived", f"{user.hoursAlive} (record: {user.recordHoursAlive})"])
             table.append(["Online", "Yes" if user.online else "No"])
-            table.append(["Last Seen", user.lastSeen.strftime("%d/%m at %H:%M")])
+            table.append(
+                ["Last Seen", user.lastSeen.strftime("%d/%m at %H:%M")])
             table.append(["Deaths", len(user.died)])
             for perk in user.perks:
                 if int(user.perks[perk]) != 0:

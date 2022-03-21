@@ -9,32 +9,35 @@ import xml.etree.ElementTree as ET
 
 # Taken from ISMapDefinitions.lua
 colours = {
-    "default": (219,215,192),
-    "forest":(189,197,163),
-    "river": (59,141,149),
-    "trail": (185,122,87),
-    "tertiary":(171,158,143),
-    "secondary":(134,125,113),
-    "primary":(134,125,113),
-    "*":(200,191,231),
-    "yes":(210,158,105),
-    "Residential":(210,158,105),
-    "CommunityServices":(139,117,235),
-    "Hospitality":(127,206,225),
-    "Industrial":(56,54,53),
-    "Medical":(229,128,151),
-    "RestaurantsAndEntertainment":(245,225,60),
-    "RetailAndCommercial":(184,205,84)
+    "default": (219, 215, 192),
+    "forest": (189, 197, 163),
+    "river": (59, 141, 149),
+    "trail": (185, 122, 87),
+    "tertiary": (171, 158, 143),
+    "secondary": (134, 125, 113),
+    "primary": (134, 125, 113),
+    "*": (200, 191, 231),
+    "yes": (210, 158, 105),
+    "Residential": (210, 158, 105),
+    "CommunityServices": (139, 117, 235),
+    "Hospitality": (127, 206, 225),
+    "Industrial": (56, 54, 53),
+    "Medical": (229, 128, 151),
+    "RestaurantsAndEntertainment": (245, 225, 60),
+    "RetailAndCommercial": (184, 205, 84)
 }
+
+pathsToTry = [
+    "steam/steamapps/common/Project Zomboid Dedicated Server/media/maps",
+    "steam/steamapps/common/ProjectZomboid/media/maps"]
+
 
 class MapHandler(commands.Cog):
     """Class which handles generation of maps"""
-    def __init__(self,bot):
+
+    def __init__(self, bot):
         self.bot = bot
         if len(config.mapsPath) == 0:
-            pathsToTry = [
-                "steam/steamapps/common/Project Zomboid Dedicated Server/media/maps", 
-                "steam/steamapps/common/ProjectZomboid/media/maps"]
             for path in pathsToTry:
                 tryPath = Path.home().joinpath(path)
                 if tryPath.exists():
@@ -55,12 +58,11 @@ class MapHandler(commands.Cog):
         chunkSize = 300
         cellx = x//chunkSize
         celly = y//chunkSize
-        posX = x%chunkSize
-        posY = y%chunkSize
+        posX = x % chunkSize
+        posY = y % chunkSize
 
         image = Image.new("RGB", (chunkSize, chunkSize), colours["default"])
         draw = ImageDraw.Draw(image)
-
 
         tree = ET.parse(config.mapsPath + ("/Muldraugh, KY/worldmap.xml"))
         root = tree.getroot()
@@ -72,12 +74,15 @@ class MapHandler(commands.Cog):
                             for coordinates in geometry.findall("coordinates"):
                                 points = []
                                 for point in coordinates.findall("point"):
-                                    points.append((int(point.get("x")),int(point.get("y"))))
+                                    points.append(
+                                        (int(point.get("x")), int(point.get("y"))))
                             for properties in feature.findall("properties"):
                                 for property in properties.findall("property"):
-                                    draw.polygon(points, fill=colours[property.get("value")])
+                                    draw.polygon(
+                                        points, fill=colours[property.get("value")])
 
-        draw.polygon(((posX-1, posY-1),(posX+1,posY-1),(posX+1,posY+1),(posX-1,posY+1)),(255,0,0))
+        draw.polygon(((posX-1, posY-1), (posX+1, posY-1),
+                     (posX+1, posY+1), (posX-1, posY+1)), (255, 0, 0))
 
         image = image.rotate(270)
         image.save("map.png")
@@ -90,5 +95,5 @@ class MapHandler(commands.Cog):
         else:
             hours = sinceSeen.seconds//(60*60)
             timeString = f"over {hours} hour{'s' if hours > 1 else ''}"
-            
-        await ctx.send(file=discord.File("map.png"),content=f"{name} was last seen {timeString} ago")
+
+        await ctx.send(file=discord.File("map.png"), content=f"{name} was last seen {timeString} ago")

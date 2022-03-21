@@ -3,7 +3,7 @@
 from chat import ChatHandler
 import config
 import discord
-from discord.ext import tasks, commands
+from discord.ext import commands
 import logging
 from maps import MapHandler
 from pathlib import Path
@@ -47,6 +47,7 @@ handler.setFormatter(logFormat)
 handler.setLevel(logging.DEBUG)
 zomboi.log.addHandler(handler)
 zomboi.log.setLevel(logging.DEBUG)
+
 
 @zomboi.event
 async def on_ready():

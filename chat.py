@@ -25,7 +25,8 @@ class ChatHandler(commands.Cog):
     async def update(self):
         """Update the handler
 
-        This will check the latest log file and update our data based on any new entries
+        This will check the latest log file and update our data based on any
+        new entries
         """
         files = glob.glob(config.logPath + "/*chat.txt")
         if len(files) > 0:
@@ -42,9 +43,11 @@ class ChatHandler(commands.Cog):
                 self.lastUpdateTimestamp = newTimestamp
 
     async def handleLog(self, timestamp: datetime, message: str):
-        """Parse the given line from the logfile and mirror chat message in discord if necessary"""
+        """Parse the given line from the logfile and mirror chat message in 
+        discord if necessary"""
 
-        # First ignore all the quickchat spam (jay...). "id = 2" seems to be the best way to identify these
+        # First ignore all the quickchat spam (jay...). "id = 2" seems to be
+        # the best way to identify these
         if "id = 2" in message:
             return
 

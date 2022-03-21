@@ -6,8 +6,10 @@ import glob
 import os
 import re
 
+
 class PerkHandler(commands.Cog):
     """Class which handles the Perk log files"""
+
     def __init__(self, bot):
         self.bot = bot
         self.lastUpdateTimestamp = datetime.now()
@@ -19,7 +21,7 @@ class PerkHandler(commands.Cog):
         timestampStr, message = line.strip()[1:].split("]", 1)
         timestamp = datetime.strptime(timestampStr, '%d-%m-%y %H:%M:%S.%f')
         return timestamp, message
-    
+
     @tasks.loop(seconds=2)
     async def update(self):
         files = glob.glob(config.logPath + "/*PerkLog.txt")
@@ -27,11 +29,11 @@ class PerkHandler(commands.Cog):
             with FileReadBackwards(files[0]) as f:
                 newTimestamp = self.lastUpdateTimestamp
                 for line in f:
-                    timestamp,message = self.splitLine(line)
+                    timestamp, message = self.splitLine(line)
                     if timestamp > newTimestamp:
                         newTimestamp = timestamp
                     if timestamp > self.lastUpdateTimestamp:
-                        message = self.handleLog(timestamp,message)
+                        message = self.handleLog(timestamp, message)
                         if message is not None and self.bot.channel is not None:
                             await self.bot.channel.send(message)
                     else:
@@ -50,31 +52,32 @@ class PerkHandler(commands.Cog):
                 for line in f:
                     self.handleLog(*self.splitLine(line))
         self.bot.log.info("Perk history loaded")
-    
 
     # Parse a line in the user log file and take appropriate action
-    def handleLog(self, timestamp : datetime, message : str):
+
+    def handleLog(self, timestamp: datetime, message: str):
         # Ignore the id at the start of the message, no idea what it's for
-        message = message[message.find("[",2) + 1:]
+        message = message[message.find("[", 2) + 1:]
 
         # Next is the name which we use to get the user
-        name, message = message.split("]",1)
+        name, message = message.split("]", 1)
         user = self.bot.get_cog('UserHandler').getUser(name)
 
         # Then position which we set if it's more recent
         x = message[1:message.find(",")]
-        y = message[message.find(",") + 1:message.find(",",message.find(",") + 1)]
-        message = message[message.find("[",2) + 1:]
+        y = message[message.find(
+            ",") + 1:message.find(",", message.find(",") + 1)]
+        message = message[message.find("[", 2) + 1:]
 
         if timestamp > user.lastSeen:
             user.lastSeen = timestamp
-            user.lastLocation = (x,y)
+            user.lastLocation = (x, y)
 
         # Then the message type, can be "Died", "Login", "Level Changed" or a list of perks
-        type, message = message.split("]",1)
+        type, message = message.split("]", 1)
 
         # All these logs should include hours survived
-        hours = re.search(r'Hours Survived: (\d+)',message).group(1)
+        hours = re.search(r'Hours Survived: (\d+)', message).group(1)
         user.hoursAlive = hours
         if int(hours) > int(user.recordHoursAlive):
             user.recordHoursAlive = hours
@@ -93,19 +96,16 @@ class PerkHandler(commands.Cog):
             case "Level Changed":
                 for perk in user.perks:
                     if perk in message:
-                        match = re.search(r'\[(\d+)\]',message)
+                        match = re.search(r'\[(\d+)\]', message)
                         level = match.group(1)
                         user.perks[perk] = level
                         if timestamp > self.lastUpdateTimestamp:
-                            self.bot.log.info(f"{user.name} {perk} changed to {level}")
+                            self.bot.log.info(
+                                f"{user.name} {perk} changed to {level}")
                             return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
             case _:
                 # Must be a list of perks following a login/player creation
                 for perk in user.perks:
-                    match = re.search(fr'{perk}=(\d+)',type)
+                    match = re.search(fr'{perk}=(\d+)', type)
                     if match is not None:
                         user.perks[perk] = match.group(1)
-
-
-
-
