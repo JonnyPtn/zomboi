@@ -1,4 +1,5 @@
 import config
+from datetime import datetime
 import discord
 from discord.ext import commands
 from pathlib import Path
@@ -80,4 +81,14 @@ class MapHandler(commands.Cog):
 
         image = image.rotate(270)
         image.save("map.png")
-        await ctx.send(file=discord.File("map.png"),content=f"{name} was last seen here")
+        sinceSeen = datetime.now() - user.lastSeen
+        if sinceSeen.seconds < 60:
+            timeString = "less than a minute"
+        elif sinceSeen.seconds < 60 * 60:
+            minutes = sinceSeen.seconds//60
+            timeString = f"{minutes} minute{'s' if minutes > 1 else ''}"
+        else:
+            hours = sinceSeen.seconds//(60*60)
+            timeString = f"over {hours} hour{'s' if hours > 1 else ''}"
+            
+        await ctx.send(file=discord.File("map.png"),content=f"{name} was last seen {timeString} ago")
