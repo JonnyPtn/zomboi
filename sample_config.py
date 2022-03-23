@@ -8,6 +8,8 @@ token = "DISCORD_BOT_TOKEN"
 logPath = ""
 
 # The id for the channel you want notifications and chat
+# This is not the channel name, but the id which you can get from right click -> Copy ID
+# or from the channel link, e.g: https://discord.com/channels/<server_id>/<channel_id>
 channel = None
 
 # The password for rcon on the server (used to relay chat from discord to game)
