@@ -2,6 +2,7 @@ import config
 from datetime import datetime
 import discord
 from discord.ext import commands
+import glob
 from pathlib import Path
 import PIL.ImageDraw as ImageDraw
 import PIL.Image as Image
@@ -43,9 +44,11 @@ class MapHandler(commands.Cog):
                 if tryPath.exists():
                     config.mapsPath = str(tryPath)
                     break
-        if len(config.mapsPath) == 0:
+        if len(config.mapsPath) == 0 or not Path(config.mapsPath).is_dir():
             self.bot.log.error("Map path not found and/or no suitable default")
             exit()
+        else:
+            self.bot.log.debug(f"map xml files: {glob.glob(config.mapsPath + '/Muldraugh, KY/*.xml')}")
 
     @commands.command()
     async def location(self, ctx, name=None):
