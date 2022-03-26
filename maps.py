@@ -48,6 +48,7 @@ class MapHandler(commands.Cog):
             self.bot.log.error("Map path not found and/or no suitable default")
             exit()
         else:
+            self.bot.log.debug(f"maps path: {config.mapsPath}")
             self.bot.log.debug(f"map xml files: {glob.glob(config.mapsPath + '/Muldraugh, KY/*.xml')}")
 
     @commands.command()
