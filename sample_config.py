@@ -8,7 +8,9 @@ token = "DISCORD_BOT_TOKEN"
 logPath = ""
 
 # The id for the channel you want notifications and chat
-# This is not the channel name, but the id which you can get from right click -> Copy ID
+# If this is a channel name string it will use the first channel it finds
+# matching that name, or it can be an integer for the discord channel ID which
+# you can get by right clicking on the channel -> copy ID
 # or from the channel link, e.g: https://discord.com/channels/<server_id>/<channel_id>
 channel = None
 

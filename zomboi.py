@@ -52,7 +52,9 @@ zomboi.log.setLevel(logging.DEBUG)
 @zomboi.event
 async def on_ready():
     zomboi.log.info(f'We have logged in as {zomboi.user}')
-    zomboi.channel = zomboi.get_channel(config.channel)
+    zomboi.channel = zomboi.get_channel(config.channel) # Find by id
+    if zomboi.channel is None:
+        zomboi.channel = discord.utils.get(zomboi.get_all_channels(), name=config.channel) # find by name
     if zomboi.channel is None:
         zomboi.log.warning('Unable to get channel, will not be enabled')
     else:
