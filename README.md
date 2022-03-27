@@ -39,3 +39,21 @@ To run:
 
 It may be a good idea to run as a service, especially on a dedicated server
 
+## Docker
+
+You will have to mount the maps and logs directories of the Project Zomboid
+server into the zomboi container at the expected paths.
+
+To build and run zomboi in a Docker container:
+
+```
+docker build -t zomboi .
+docker run -d -v /path/to/maps:~/steam/steamapps/common/ProjectZomboid/media/maps -v /path/to/logs:~/Zomboid/Logs -e DISCORD_BOT_TOKEN=my_bot_token -e DISCORD_CHANNEL=channel_name_or_id -e SERVER_RCON_PASSWORD=my_rcon_password zomboi
+```
+
+Or using docker-compose:
+
+```
+docker-compose build
+docker-compose up -d
+```

@@ -1,0 +1,13 @@
+version: "3.7"
+
+services:
+  zomboi:
+    build: .
+    volumes:
+      - /path/to/maps:/home/zomboi/steam/steamapps/common/ProjectZomboid/media/maps
+      - /path/to/logs:/home/zomboi/Zomboid/Logs
+    environment:
+      DISCORD_BOT_TOKEN: "my_bot_token"
+      DISCORD_CHANNEL: "channel_name_or_id"
+      SERVER_RCON_PASSWORD: "my_rcon_password"
+    restart: unless-stopped
