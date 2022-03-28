@@ -17,6 +17,9 @@ channel = None
 # The password for rcon on the server (used to relay chat from discord to game)
 rconPassword = None
 
+# The port to use for the rcon connection, default is 27015
+rconPort = 27015
+
 # Path to the project zomboid maps folder
 # leave empty to try the default location, which will look for both
 # dedicated server and regular game files

@@ -6,7 +6,7 @@ import re
 
 def run_rcon(command):
     """Run the given rcon command"""
-    with Client("127.0.0.1", 27015, passwd=config.rconPassword, timeout=5.0) as client:
+    with Client("127.0.0.1", config.rconPort, passwd=config.rconPassword, timeout=5.0) as client:
         return client.run(command)
 
 
