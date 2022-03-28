@@ -82,30 +82,29 @@ class PerkHandler(commands.Cog):
         if int(hours) > int(user.recordHoursAlive):
             user.recordHoursAlive = hours
 
-        match type:
-            case "Died":
-                user.died.append(timestamp)
-                if timestamp > self.lastUpdateTimestamp:
-                    self.bot.log.info(f"{user.name} died")
-                    return f":zombie: {user.name} died after surviving {user.hoursAlive} hours :dizzy_face:"
-            case "Login":
-                if timestamp > self.lastUpdateTimestamp:
-                    user.online = True
-                    self.bot.log.info(f"{user.name} login")
-                    return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
-            case "Level Changed":
-                for perk in user.perks:
-                    if perk in message:
-                        match = re.search(r'\[(\d+)\]', message)
-                        level = match.group(1)
-                        user.perks[perk] = level
-                        if timestamp > self.lastUpdateTimestamp:
-                            self.bot.log.info(
-                                f"{user.name} {perk} changed to {level}")
-                            return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
-            case _:
-                # Must be a list of perks following a login/player creation
-                for perk in user.perks:
-                    match = re.search(fr'{perk}=(\d+)', type)
-                    if match is not None:
-                        user.perks[perk] = match.group(1)
+        if type == "Died":
+            user.died.append(timestamp)
+            if timestamp > self.lastUpdateTimestamp:
+                self.bot.log.info(f"{user.name} died")
+                return f":zombie: {user.name} died after surviving {user.hoursAlive} hours :dizzy_face:"
+        elif type == "Login":
+            if timestamp > self.lastUpdateTimestamp:
+                user.online = True
+                self.bot.log.info(f"{user.name} login")
+                return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
+        elif type == "Level Changed":
+            for perk in user.perks:
+                if perk in message:
+                    match = re.search(r'\[(\d+)\]', message)
+                    level = match.group(1)
+                    user.perks[perk] = level
+                    if timestamp > self.lastUpdateTimestamp:
+                        self.bot.log.info(
+                            f"{user.name} {perk} changed to {level}")
+                        return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
+        else:
+            # Must be a list of perks following a login/player creation
+            for perk in user.perks:
+                match = re.search(fr'{perk}=(\d+)', type)
+                if match is not None:
+                    user.perks[perk] = match.group(1)

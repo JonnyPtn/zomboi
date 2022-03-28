@@ -8,6 +8,7 @@ import glob
 import os
 import re
 from tabulate import tabulate
+from typing import List
 
 
 empty_perkset = {
@@ -50,7 +51,7 @@ class User:
     online: bool = False
     lastSeen: datetime = datetime(1, 1, 1)
     lastLocation: tuple = (0, 0)
-    died: list[datetime] = field(default_factory=lambda: [])
+    died: List[datetime] = field(default_factory=lambda: [])
 
 
 class UserHandler(commands.Cog):

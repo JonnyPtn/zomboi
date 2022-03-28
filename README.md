@@ -23,7 +23,7 @@ No Category:
 ```
 
 ## Requirements
-Python 3.10 is used for development, but please do log any issues you have with lower versions as I'm open to supporting them
+Python 3.8 and above should work, but please do log any issues you have with lower versions as I'm open to supporting them
 
 To install dependencies:
 `pip install -r requirements.txt`
