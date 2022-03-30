@@ -3,4 +3,5 @@ file-read-backwards
 watchdog
 tabulate
 pillow
+python-dotenv
 rcon

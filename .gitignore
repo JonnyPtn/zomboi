@@ -159,6 +159,5 @@ cython_debug/
 # End of https://www.toptal.com/developers/gitignore/api/python
 
 *.log
-config.py
 .vscode
 map.png

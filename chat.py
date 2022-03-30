@@ -1,4 +1,3 @@
-import config
 from datetime import datetime
 from discord.ext import tasks, commands
 from file_read_backwards import FileReadBackwards
@@ -9,8 +8,9 @@ import re
 class ChatHandler(commands.Cog):
     """Class which handles the chat log files"""
 
-    def __init__(self, bot):
+    def __init__(self, bot, logPath):
         self.bot = bot
+        self.logPath = logPath
         self.lastUpdateTimestamp = datetime.now()
         self.update.start()
         self.webhook = None
@@ -28,7 +28,7 @@ class ChatHandler(commands.Cog):
         This will check the latest log file and update our data based on any
         new entries
         """
-        files = glob.glob(config.logPath + "/*chat.txt")
+        files = glob.glob(self.logPath + "/*chat.txt")
         if len(files) > 0:
             with FileReadBackwards(files[0]) as f:
                 newTimestamp = self.lastUpdateTimestamp

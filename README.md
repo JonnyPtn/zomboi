@@ -48,7 +48,7 @@ To build and run zomboi in a Docker container:
 
 ```
 docker build -t zomboi .
-docker run -d -v /path/to/maps:~/steam/steamapps/common/ProjectZomboid/media/maps -v /path/to/logs:~/Zomboid/Logs -e DISCORD_BOT_TOKEN=my_bot_token -e DISCORD_CHANNEL=channel_name_or_id -e SERVER_RCON_PASSWORD=my_rcon_password zomboi
+docker run -d -v /path/to/maps:~/steam/steamapps/common/ProjectZomboid/media/maps -v /path/to/logs:~/Zomboid/Logs -e DISCORD_TOKEN=my_bot_token -e CHANNEL=channel_name_or_id -e RCON_PASSWORD=my_rcon_password zomboi
 ```
 
 Or using docker-compose:

@@ -1,8 +1,8 @@
-import config
 from datetime import datetime
 import discord
 from discord.ext import commands
 import glob
+import os
 from pathlib import Path
 import PIL.ImageDraw as ImageDraw
 import PIL.Image as Image
@@ -38,18 +38,19 @@ class MapHandler(commands.Cog):
 
     def __init__(self, bot):
         self.bot = bot
-        if len(config.mapsPath) == 0:
+        # Validate the maps path
+        self.mapsPath = os.getenv("MAPS_PATH")
+        if len(self.mapsPath) == 0:
             for path in pathsToTry:
                 tryPath = Path.home().joinpath(path)
                 if tryPath.exists():
-                    config.mapsPath = str(tryPath)
+                    mapsPath = str(tryPath)
                     break
-        if len(config.mapsPath) == 0 or not Path(config.mapsPath).is_dir():
+        if len(self.mapsPath) == 0 or not Path(self.mapsPath).is_dir():
             self.bot.log.error("Map path not found and/or no suitable default")
             exit()
         else:
-            self.bot.log.debug(f"maps path: {config.mapsPath}")
-            self.bot.log.debug(f"map xml files: {glob.glob(config.mapsPath + '/Muldraugh, KY/*.xml')}")
+            self.bot.log.debug(f"maps path: {self.mapsPath}")
 
     @commands.command()
     async def location(self, ctx, name=None):
@@ -68,7 +69,7 @@ class MapHandler(commands.Cog):
         image = Image.new("RGB", (chunkSize, chunkSize), colours["default"])
         draw = ImageDraw.Draw(image)
 
-        tree = ET.parse(config.mapsPath + ("/Muldraugh, KY/worldmap.xml"))
+        tree = ET.parse(self.mapsPath + ("/Muldraugh, KY/worldmap.xml"))
         root = tree.getroot()
         for cell in root.findall("cell"):
             if int(cell.get("x")) == cellx and int(cell.get("y")) == celly:

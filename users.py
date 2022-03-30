@@ -1,4 +1,3 @@
-import config
 from dataclasses import dataclass, field
 from datetime import datetime
 import discord
@@ -57,8 +56,9 @@ class User:
 class UserHandler(commands.Cog):
     """Handles all the info we get from the user log files"""
 
-    def __init__(self, bot):
+    def __init__(self, bot, logPath):
         self.bot = bot
+        self.logPath = logPath
         self.lastUpdateTimestamp = datetime.now()
         self.users = {}
         self.loadHistory()
@@ -80,7 +80,7 @@ class UserHandler(commands.Cog):
     @tasks.loop(seconds=2)
     async def update(self):
         """Update from the log file anything since the last update"""
-        files = glob.glob(config.logPath + "/*user.txt")
+        files = glob.glob(self.logPath + "/*user.txt")
         if len(files) > 0:
             with FileReadBackwards(files[0]) as f:
                 newTimestamp = self.lastUpdateTimestamp
@@ -106,7 +106,7 @@ class UserHandler(commands.Cog):
     def loadHistory(self):
         """Go through all log files and load the info"""
         self.bot.log.info("Loading user history...")
-        files = glob.glob(config.logPath + '/**/*user.txt', recursive=True)
+        files = glob.glob(self.logPath + '/**/*user.txt', recursive=True)
         files.sort(key=os.path.getmtime)
         for file in files:
             with open(file) as f:

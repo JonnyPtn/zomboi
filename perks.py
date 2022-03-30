@@ -1,4 +1,3 @@
-import config
 from datetime import datetime
 from discord.ext import tasks, commands
 from file_read_backwards import FileReadBackwards
@@ -10,8 +9,9 @@ import re
 class PerkHandler(commands.Cog):
     """Class which handles the Perk log files"""
 
-    def __init__(self, bot):
+    def __init__(self, bot, logPath):
         self.bot = bot
+        self.logPath = logPath
         self.lastUpdateTimestamp = datetime.now()
         self.loadHistory()
         self.update.start()
@@ -24,7 +24,7 @@ class PerkHandler(commands.Cog):
 
     @tasks.loop(seconds=2)
     async def update(self):
-        files = glob.glob(config.logPath + "/*PerkLog.txt")
+        files = glob.glob(self.logPath + "/*PerkLog.txt")
         if len(files) > 0:
             with FileReadBackwards(files[0]) as f:
                 newTimestamp = self.lastUpdateTimestamp
@@ -45,7 +45,7 @@ class PerkHandler(commands.Cog):
         self.bot.log.info("Loading Perk history...")
 
         # Go through each user file in the log folder and subfolders
-        files = glob.glob(config.logPath + '/**/*PerkLog.txt', recursive=True)
+        files = glob.glob(self.logPath + '/**/*PerkLog.txt', recursive=True)
         files.sort(key=os.path.getmtime)
         for file in files:
             with open(file) as f:

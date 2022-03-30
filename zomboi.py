@@ -1,21 +1,25 @@
 # The main file for zomboi bot. Sets up and runs the discord client
 
 from chat import ChatHandler
-import config
 import discord
 from discord.ext import commands
+from dotenv import load_dotenv
 import logging
 from maps import MapHandler
+import os
 from pathlib import Path
 from perks import PerkHandler
 from users import UserHandler
 from rcon_adapter import RCONAdapter
 
+load_dotenv(override=True)
+
 # Verify the log path
-if len(config.logPath) == 0:
+logPath = os.getenv("LOGS_PATH")
+if len(logPath) == 0:
     path = Path.home().joinpath("Zomboid/Logs")
     if path.exists():
-        config.logPath = str(path)
+        logPath = str(path)
     else:
         logging.error("Zomboid log path not set and unable to find default")
         exit()
@@ -52,18 +56,20 @@ zomboi.log.setLevel(logging.DEBUG)
 @zomboi.event
 async def on_ready():
     zomboi.log.info(f'We have logged in as {zomboi.user}')
-    zomboi.channel = zomboi.get_channel(config.channel) # Find by id
+    channel = os.getenv("CHANNEL")
+    zomboi.channel = zomboi.get_channel(channel) # Find by id
     if zomboi.channel is None:
-        zomboi.channel = discord.utils.get(zomboi.get_all_channels(), name=config.channel) # find by name
+        zomboi.channel = discord.utils.get(zomboi.get_all_channels(), name=channel) # find by name
     if zomboi.channel is None:
         zomboi.log.warning('Unable to get channel, will not be enabled')
     else:
         zomboi.log.info('channel connected')
-    zomboi.add_cog(UserHandler(zomboi))
-    zomboi.add_cog(ChatHandler(zomboi))
-    zomboi.add_cog(PerkHandler(zomboi))
+    zomboi.add_cog(UserHandler(zomboi, logPath))
+    zomboi.add_cog(ChatHandler(zomboi, logPath))
+    zomboi.add_cog(PerkHandler(zomboi, logPath))
     zomboi.add_cog(RCONAdapter(zomboi))
     zomboi.add_cog(MapHandler(zomboi))
 
 # Always finally run the bot
-zomboi.run(config.token)
+token = os.getenv("DISCORD_TOKEN")
+zomboi.run(os.getenv("DISCORD_TOKEN"))
