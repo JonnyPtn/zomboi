@@ -44,7 +44,7 @@ class MapHandler(commands.Cog):
             for path in pathsToTry:
                 tryPath = Path.home().joinpath(path)
                 if tryPath.exists():
-                    mapsPath = str(tryPath)
+                    self.mapsPath = str(tryPath)
                     break
         if len(self.mapsPath) == 0 or not Path(self.mapsPath).is_dir():
             self.bot.log.error("Map path not found and/or no suitable default")
