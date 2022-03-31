@@ -29,7 +29,8 @@ To install dependencies:
 `pip install -r requirements.txt`
 
 ## Configuration
-Configuration is loaded from a `config.py` file, a sample for which is provided (`sample_config.py`) so you can just rename that and set the values
+Configuration can be specified using environment variables, which can also be declared using an environment file named `.env`.
+Sample configuration is provided in a file named `sample.env`. You can copy this file, name it `.env` and change the values to suit your environment.
 
 ## Running the bot
 This bot works by monitoring the log files produced by the game, so must be run on the same machine as the server/host
