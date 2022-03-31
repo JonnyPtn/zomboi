@@ -16,7 +16,7 @@ load_dotenv(override=True)
 
 # Verify the log path
 logPath = os.getenv("LOGS_PATH")
-if len(logPath) == 0:
+if logPath is None or len(logPath) == 0:
     path = Path.home().joinpath("Zomboid/Logs")
     if path.exists():
         logPath = str(path)
@@ -73,4 +73,8 @@ async def on_ready():
 
 # Always finally run the bot
 token = os.getenv("DISCORD_TOKEN")
+if token is None:
+    zomboi.log.error("DISCORD_TOKEN environment variable not found")
+    exit()
+
 zomboi.run(os.getenv("DISCORD_TOKEN"))

@@ -7,7 +7,12 @@ class RCONAdapter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         self.rconHost = "localhost"
-        self.rconPort = int(os.getenv("RCON_PORT"))
+        port = os.getenv("RCON_PORT")
+        if port is None:            
+            self.rconPort = 27015
+            self.bot.log.info("Using default port")
+        else:
+            self.rconPort = int(port)
         self.rconPassword = os.getenv("RCON_PASSWORD")
 
     @commands.command()

@@ -41,7 +41,7 @@ class MapHandler(commands.Cog):
         self.bot = bot
         # Validate the maps path
         self.mapsPath = os.getenv("MAPS_PATH")
-        if len(self.mapsPath) == 0:
+        if self.mapsPath is None or len(self.mapsPath) == 0:
             for path in pathsToTry:
                 tryPath = Path.home().joinpath(path)
                 if tryPath.exists():
@@ -51,7 +51,7 @@ class MapHandler(commands.Cog):
             self.bot.log.error("Map path not found and/or no suitable default")
             exit()
         else:
-            self.bot.log.debug(f"maps path: {self.mapsPath}")
+            self.bot.log.info(f"Maps path: {self.mapsPath}")
 
     @commands.command()
     async def location(self, ctx, name=None):
