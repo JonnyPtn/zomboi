@@ -16,7 +16,7 @@ class RCONAdapter(commands.Cog):
         if newValue is not None:
             with Client(self.rconHost, self.rconPort, passwd=self.rconPassword, timeout=5.0) as client:
                 result = client.run(f"changeoption {option} {newValue}")
-            await ctx.send(f"`{result}`")
+            await ctx.send(f"`{resÍult}`")
         else:
             with Client(self.rconHost, self.rconPort, passwd=self.rconPassword, timeout=5.0) as client:
                 message = client.run("showoptions")

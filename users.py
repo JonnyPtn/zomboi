@@ -43,6 +43,7 @@ empty_perkset = {
 @dataclass
 class User:
     """A class representing a user"""
+
     name: str
     hoursAlive: int = 0
     recordHoursAlive: int = 0
@@ -74,7 +75,7 @@ class UserHandler(commands.Cog):
     def splitLine(self, line: str):
         """Split a log line into a timestamp and the remaining message"""
         timestampStr, message = line.strip()[1:].split("]", 1)
-        timestamp = datetime.strptime(timestampStr, '%d-%m-%y %H:%M:%S.%f')
+        timestamp = datetime.strptime(timestampStr, "%d-%m-%y %H:%M:%S.%f")
         return timestamp, message
 
     @tasks.loop(seconds=2)
@@ -95,18 +96,19 @@ class UserHandler(commands.Cog):
                 self.lastUpdateTimestamp = newTimestamp
 
         # Also update the bot activity here
-        onlineCount = len(
-            [user for user in self.users if self.users[user].online])
+        onlineCount = len([user for user in self.users if self.users[user].online])
         if onlineCount != self.onlineCount:
             playerString = "nobody" if onlineCount == 0 else f"{onlineCount} survivors"
             # have to abbreviate or it gets truncated
-            await self.bot.change_presence(activity=discord.Game(f"PZ with {playerString}"))
+            await self.bot.change_presence(
+                activity=discord.Game(f"PZ with {playerString}")
+            )
             self.onlineCount = onlineCount
 
     def loadHistory(self):
         """Go through all log files and load the info"""
         self.bot.log.info("Loading user history...")
-        files = glob.glob(self.logPath + '/**/*user.txt', recursive=True)
+        files = glob.glob(self.logPath + "/**/*user.txt", recursive=True)
         files.sort(key=os.path.getmtime)
         for file in files:
             with open(file) as f:
@@ -118,7 +120,7 @@ class UserHandler(commands.Cog):
         """Parse the log message and store any useful info. Returns a message string if relevant"""
 
         if "disconnected" in message:
-            matches = re.search(r'\"(.*)\".*\((\d+),(\d+),\d+\)', message)
+            matches = re.search(r"\"(.*)\".*\((\d+),(\d+),\d+\)", message)
             name = matches.group(1)
             user = self.getUser(name)
             if timestamp > user.lastSeen:
@@ -128,7 +130,7 @@ class UserHandler(commands.Cog):
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} disconnected")
         elif "fully connected" in message:
-            matches = re.search(r'\"(.*)\".*\((\d+),(\d+)', message)
+            matches = re.search(r"\"(.*)\".*\((\d+),(\d+)", message)
             name = matches.group(1)
             user = self.getUser(name)
             if timestamp > user.lastSeen:
@@ -147,9 +149,17 @@ class UserHandler(commands.Cog):
         """Return a list of users on the server with basic info"""
         table = [["Name", "Online", "Last Seen", "Hours survived"]]
         for user in self.users.values():
-            table.append([user.name, "Yes" if user.online else "No",
-                          user.lastSeen.strftime("%d/%m at %H:%M"), user.hoursAlive])
-        await ctx.send(f'```\n{tabulate(table,headers="firstrow", tablefmt="fancy_grid")}\n```')
+            table.append(
+                [
+                    user.name,
+                    "Yes" if user.online else "No",
+                    user.lastSeen.strftime("%d/%m at %H:%M"),
+                    user.hoursAlive,
+                ]
+            )
+        await ctx.send(
+            f'```\n{tabulate(table,headers="firstrow", tablefmt="fancy_grid")}\n```'
+        )
 
     @commands.command()
     async def info(self, ctx, name=None):
@@ -164,10 +174,13 @@ class UserHandler(commands.Cog):
             table = []
             table.append(["Name", user.name])
             table.append(
-                ["Hours survived", f"{user.hoursAlive} (record: {user.recordHoursAlive})"])
+                [
+                    "Hours survived",
+                    f"{user.hoursAlive} (record: {user.recordHoursAlive})",
+                ]
+            )
             table.append(["Online", "Yes" if user.online else "No"])
-            table.append(
-                ["Last Seen", user.lastSeen.strftime("%d/%m at %H:%M")])
+            table.append(["Last Seen", user.lastSeen.strftime("%d/%m at %H:%M")])
             table.append(["Deaths", len(user.died)])
             for perk in user.perks:
                 if int(user.perks[perk]) != 0:

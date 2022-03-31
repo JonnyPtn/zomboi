@@ -18,7 +18,7 @@ class ChatHandler(commands.Cog):
     def splitLine(self, line: str):
         """Split a log line into a timestamp and the remaining message"""
         timestampStr, message = line.strip()[1:].split("]", 1)
-        timestamp = datetime.strptime(timestampStr, '%d-%m-%y %H:%M:%S.%f')
+        timestamp = datetime.strptime(timestampStr, "%d-%m-%y %H:%M:%S.%f")
         return timestamp, message
 
     @tasks.loop(seconds=2)
@@ -43,7 +43,7 @@ class ChatHandler(commands.Cog):
                 self.lastUpdateTimestamp = newTimestamp
 
     async def handleLog(self, timestamp: datetime, message: str):
-        """Parse the given line from the logfile and mirror chat message in 
+        """Parse the given line from the logfile and mirror chat message in
         discord if necessary"""
 
         # First ignore all the quickchat spam (jay...). "id = 2" seems to be
@@ -52,7 +52,7 @@ class ChatHandler(commands.Cog):
             return
 
         # Mirror any other received messages in the discord chat
-        pattern = r'] Message.*author=\'(.*)\', text=\'(.*)\''
+        pattern = r"] Message.*author=\'(.*)\', text=\'(.*)\'"
         match = re.search(pattern, message)
         if match and self.bot.channel is not None:
             # Use a webhook to make it look like we're the discord member
@@ -68,4 +68,6 @@ class ChatHandler(commands.Cog):
             for member in self.bot.get_all_members():
                 if match.group(1) in member.name:
                     avatar_url = member.avatar_url
-            await self.webhook.send(match.group(2), username=name, avatar_url=avatar_url)
+            await self.webhook.send(
+                match.group(2), username=name, avatar_url=avatar_url
+            )

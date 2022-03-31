@@ -25,12 +25,13 @@ colours = {
     "Industrial": (56, 54, 53),
     "Medical": (229, 128, 151),
     "RestaurantsAndEntertainment": (245, 225, 60),
-    "RetailAndCommercial": (184, 205, 84)
+    "RetailAndCommercial": (184, 205, 84),
 }
 
 pathsToTry = [
     "steam/steamapps/common/Project Zomboid Dedicated Server/media/maps",
-    "steam/steamapps/common/ProjectZomboid/media/maps"]
+    "steam/steamapps/common/ProjectZomboid/media/maps",
+]
 
 
 class MapHandler(commands.Cog):
@@ -57,12 +58,12 @@ class MapHandler(commands.Cog):
         """Get the last known location of the given user"""
         if name is None:
             name = ctx.author.name
-        user = self.bot.get_cog('UserHandler').getUser(name)
+        user = self.bot.get_cog("UserHandler").getUser(name)
         x = int(user.lastLocation[0])
         y = int(user.lastLocation[1])
         chunkSize = 300
-        cellx = x//chunkSize
-        celly = y//chunkSize
+        cellx = x // chunkSize
+        celly = y // chunkSize
         posX = x % chunkSize
         posY = y % chunkSize
 
@@ -80,14 +81,23 @@ class MapHandler(commands.Cog):
                                 points = []
                                 for point in coordinates.findall("point"):
                                     points.append(
-                                        (int(point.get("x")), int(point.get("y"))))
+                                        (int(point.get("x")), int(point.get("y")))
+                                    )
                             for properties in feature.findall("properties"):
                                 for property in properties.findall("property"):
                                     draw.polygon(
-                                        points, fill=colours[property.get("value")])
+                                        points, fill=colours[property.get("value")]
+                                    )
 
-        draw.polygon(((posX-1, posY-1), (posX+1, posY-1),
-                     (posX+1, posY+1), (posX-1, posY+1)), (255, 0, 0))
+        draw.polygon(
+            (
+                (posX - 1, posY - 1),
+                (posX + 1, posY - 1),
+                (posX + 1, posY + 1),
+                (posX - 1, posY + 1),
+            ),
+            (255, 0, 0),
+        )
 
         image = image.rotate(270)
         image.save("map.png")
@@ -95,10 +105,13 @@ class MapHandler(commands.Cog):
         if sinceSeen.seconds < 60:
             timeString = "less than a minute"
         elif sinceSeen.seconds < 60 * 60:
-            minutes = sinceSeen.seconds//60
+            minutes = sinceSeen.seconds // 60
             timeString = f"{minutes} minute{'s' if minutes > 1 else ''}"
         else:
-            hours = sinceSeen.seconds//(60*60)
+            hours = sinceSeen.seconds // (60 * 60)
             timeString = f"over {hours} hour{'s' if hours > 1 else ''}"
 
-        await ctx.send(file=discord.File("map.png"), content=f"{name} was last seen {timeString} ago")
+        await ctx.send(
+            file=discord.File("map.png"),
+            content=f"{name} was last seen {timeString} ago",
+        )

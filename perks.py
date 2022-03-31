@@ -19,7 +19,7 @@ class PerkHandler(commands.Cog):
     def splitLine(self, line: str):
         """Split a log line into a timestamp and the remaining message"""
         timestampStr, message = line.strip()[1:].split("]", 1)
-        timestamp = datetime.strptime(timestampStr, '%d-%m-%y %H:%M:%S.%f')
+        timestamp = datetime.strptime(timestampStr, "%d-%m-%y %H:%M:%S.%f")
         return timestamp, message
 
     @tasks.loop(seconds=2)
@@ -45,7 +45,7 @@ class PerkHandler(commands.Cog):
         self.bot.log.info("Loading Perk history...")
 
         # Go through each user file in the log folder and subfolders
-        files = glob.glob(self.logPath + '/**/*PerkLog.txt', recursive=True)
+        files = glob.glob(self.logPath + "/**/*PerkLog.txt", recursive=True)
         files.sort(key=os.path.getmtime)
         for file in files:
             with open(file) as f:
@@ -57,17 +57,16 @@ class PerkHandler(commands.Cog):
 
     def handleLog(self, timestamp: datetime, message: str):
         # Ignore the id at the start of the message, no idea what it's for
-        message = message[message.find("[", 2) + 1:]
+        message = message[message.find("[", 2) + 1 :]
 
         # Next is the name which we use to get the user
         name, message = message.split("]", 1)
-        user = self.bot.get_cog('UserHandler').getUser(name)
+        user = self.bot.get_cog("UserHandler").getUser(name)
 
         # Then position which we set if it's more recent
-        x = message[1:message.find(",")]
-        y = message[message.find(
-            ",") + 1:message.find(",", message.find(",") + 1)]
-        message = message[message.find("[", 2) + 1:]
+        x = message[1 : message.find(",")]
+        y = message[message.find(",") + 1 : message.find(",", message.find(",") + 1)]
+        message = message[message.find("[", 2) + 1 :]
 
         if timestamp > user.lastSeen:
             user.lastSeen = timestamp
@@ -77,7 +76,7 @@ class PerkHandler(commands.Cog):
         type, message = message.split("]", 1)
 
         # All these logs should include hours survived
-        hours = re.search(r'Hours Survived: (\d+)', message).group(1)
+        hours = re.search(r"Hours Survived: (\d+)", message).group(1)
         user.hoursAlive = hours
         if int(hours) > int(user.recordHoursAlive):
             user.recordHoursAlive = hours
@@ -95,16 +94,15 @@ class PerkHandler(commands.Cog):
         elif type == "Level Changed":
             for perk in user.perks:
                 if perk in message:
-                    match = re.search(r'\[(\d+)\]', message)
+                    match = re.search(r"\[(\d+)\]", message)
                     level = match.group(1)
                     user.perks[perk] = level
                     if timestamp > self.lastUpdateTimestamp:
-                        self.bot.log.info(
-                            f"{user.name} {perk} changed to {level}")
+                        self.bot.log.info(f"{user.name} {perk} changed to {level}")
                         return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
         else:
             # Must be a list of perks following a login/player creation
             for perk in user.perks:
-                match = re.search(fr'{perk}=(\d+)', type)
+                match = re.search(rf"{perk}=(\d+)", type)
                 if match is not None:
                     user.perks[perk] = match.group(1)

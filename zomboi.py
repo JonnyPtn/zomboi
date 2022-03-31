@@ -31,12 +31,10 @@ intents.guilds = True
 zomboi = commands.bot.Bot("!", intents=intents)
 
 # Redirect the discord log to a file
-logFormat = logging.Formatter(
-    '%(asctime)s:%(levelname)s:%(name)s: %(message)s')
-discordLogger = logging.getLogger('discord')
+logFormat = logging.Formatter("%(asctime)s:%(levelname)s:%(name)s: %(message)s")
+discordLogger = logging.getLogger("discord")
 discordLogger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(
-    filename='discord.log', encoding='utf-8', mode='w')
+handler = logging.FileHandler(filename="discord.log", encoding="utf-8", mode="w")
 handler.setFormatter(logFormat)
 discordLogger.addHandler(handler)
 
@@ -46,7 +44,7 @@ handler = logging.StreamHandler()
 handler.setFormatter(logFormat)
 handler.setLevel(logging.INFO)
 zomboi.log.addHandler(handler)
-handler = logging.FileHandler(filename='zomboi.log')
+handler = logging.FileHandler(filename="zomboi.log")
 handler.setFormatter(logFormat)
 handler.setLevel(logging.DEBUG)
 zomboi.log.addHandler(handler)
@@ -55,20 +53,23 @@ zomboi.log.setLevel(logging.DEBUG)
 
 @zomboi.event
 async def on_ready():
-    zomboi.log.info(f'We have logged in as {zomboi.user}')
+    zomboi.log.info(f"We have logged in as {zomboi.user}")
     channel = os.getenv("CHANNEL")
-    zomboi.channel = zomboi.get_channel(channel) # Find by id
+    zomboi.channel = zomboi.get_channel(channel)  # Find by id
     if zomboi.channel is None:
-        zomboi.channel = discord.utils.get(zomboi.get_all_channels(), name=channel) # find by name
+        zomboi.channel = discord.utils.get(
+            zomboi.get_all_channels(), name=channel
+        )  # find by name
     if zomboi.channel is None:
-        zomboi.log.warning('Unable to get channel, will not be enabled')
+        zomboi.log.warning("Unable to get channel, will not be enabled")
     else:
-        zomboi.log.info('channel connected')
+        zomboi.log.info("channel connected")
     zomboi.add_cog(UserHandler(zomboi, logPath))
     zomboi.add_cog(ChatHandler(zomboi, logPath))
     zomboi.add_cog(PerkHandler(zomboi, logPath))
     zomboi.add_cog(RCONAdapter(zomboi))
     zomboi.add_cog(MapHandler(zomboi))
+
 
 # Always finally run the bot
 token = os.getenv("DISCORD_TOKEN")
