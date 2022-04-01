@@ -62,9 +62,11 @@ class UserHandler(commands.Cog):
         self.logPath = logPath
         self.lastUpdateTimestamp = datetime.now()
         self.users = {}
+        self.notifyDisconnect = os.getenv("DISCONNECTS", "True") == "True"
         self.loadHistory()
         self.update.start()
         self.onlineCount = None
+        return
 
     def getUser(self, name: str):
         """Get a user from a name, will create if it doesn't exist"""
@@ -90,7 +92,9 @@ class UserHandler(commands.Cog):
                     if timestamp > newTimestamp:
                         newTimestamp = timestamp
                     if timestamp > self.lastUpdateTimestamp:
-                        self.handleLog(timestamp, message)
+                        message = self.handleLog(timestamp, message)
+                        if message is not None and self.bot.channel is not None:
+                            await self.bot.channel.send(message)
                     else:
                         break
                 self.lastUpdateTimestamp = newTimestamp
@@ -129,6 +133,9 @@ class UserHandler(commands.Cog):
                 user.lastLocation = (matches.group(2), matches.group(3))
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} disconnected")
+                if self.notifyDisconnect:
+                    return f":person_running: {user.name} has left"
+
         elif "fully connected" in message:
             matches = re.search(r"\"(.*)\".*\((\d+),(\d+)", message)
             name = matches.group(1)

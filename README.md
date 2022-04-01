@@ -4,7 +4,7 @@ A discord bot for Project Zomboid. You are welcome to [log](https://github.com/J
 
 ## Features
 - Mirror in-game chat messages to discord channel using linked discord name/avatar
-- Notifications for logins and deaths
+- Notifications for logins, disconnects, deaths and perk changes
 - Presence shows number of players currently online
 - View and change server options
 - Request a map showing a players location

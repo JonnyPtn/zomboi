@@ -15,6 +15,9 @@ class PerkHandler(commands.Cog):
         self.lastUpdateTimestamp = datetime.now()
         self.loadHistory()
         self.update.start()
+        self.notifyJoin = os.getenv("JOINS", "True") == "True"
+        self.notifyDeath = os.getenv("DEATHS", "True") == "True"
+        self.notifyPerk = os.getenv("PERKS", "True") == "True"
 
     def splitLine(self, line: str):
         """Split a log line into a timestamp and the remaining message"""
@@ -85,12 +88,14 @@ class PerkHandler(commands.Cog):
             user.died.append(timestamp)
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} died")
-                return f":zombie: {user.name} died after surviving {user.hoursAlive} hours :dizzy_face:"
+                if self.notifyDeath:
+                    return f":zombie: {user.name} died after surviving {user.hoursAlive} hours :dizzy_face:"
         elif type == "Login":
             if timestamp > self.lastUpdateTimestamp:
                 user.online = True
                 self.bot.log.info(f"{user.name} login")
-                return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
+                if self.notifyJoin:
+                    return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
         elif type == "Level Changed":
             for perk in user.perks:
                 if perk in message:
@@ -99,7 +104,8 @@ class PerkHandler(commands.Cog):
                     user.perks[perk] = level
                     if timestamp > self.lastUpdateTimestamp:
                         self.bot.log.info(f"{user.name} {perk} changed to {level}")
-                        return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
+                        if self.notifyPerk:
+                            return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
         else:
             # Must be a list of perks following a login/player creation
             for perk in user.perks:
