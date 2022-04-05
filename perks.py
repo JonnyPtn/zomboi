@@ -97,18 +97,15 @@ class PerkHandler(commands.Cog):
                 if self.notifyJoin:
                     return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
         elif type == "Level Changed":
-            for perk in user.perks:
-                if perk in message:
-                    match = re.search(r"\[(\d+)\]", message)
-                    level = match.group(1)
-                    user.perks[perk] = level
-                    if timestamp > self.lastUpdateTimestamp:
-                        self.bot.log.info(f"{user.name} {perk} changed to {level}")
-                        if self.notifyPerk:
-                            return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
+            match = re.search(r"\[(\w+)\]\[(\d+)\]", message)
+            perk = match.group(1)
+            level = match.group(2)
+            user.perks[perk] = level
+            if timestamp > self.lastUpdateTimestamp:
+                self.bot.log.info(f"{user.name} {perk} changed to {level}")
+                if self.notifyPerk:
+                    return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
         else:
             # Must be a list of perks following a login/player creation
-            for perk in user.perks:
-                match = re.search(rf"{perk}=(\d+)", type)
-                if match is not None:
-                    user.perks[perk] = match.group(1)
+            for (name, value) in re.findall(r"(\w+)=(\d+)", type):
+                user.perks[name] = value

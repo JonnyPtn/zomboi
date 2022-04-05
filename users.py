@@ -9,37 +9,6 @@ import re
 from tabulate import tabulate
 from typing import List
 
-
-empty_perkset = {
-    "Cooking": 0,
-    "Fitness": 0,
-    "Strength": 0,
-    "Blunt": 0,
-    "Axe": 0,
-    "Sprinting": 0,
-    "Lightfoot": 0,
-    "Nimble": 0,
-    "Sneak": 0,
-    "Woodwork": 0,
-    "Aiming": 0,
-    "Reloading": 0,
-    "Farming": 0,
-    "Fishing": 0,
-    "Trapping": 0,
-    "PlantScavenging": 0,
-    "Doctor": 0,
-    "Electricity": 0,
-    "MetalWelding": 0,
-    "Mechanics": 0,
-    "Spear": 0,
-    "Maintenance": 0,
-    "SmallBlade": 0,
-    "LongBlade": 0,
-    "SmallBlunt": 0,
-    "Tailoring": 0,
-}
-
-
 @dataclass
 class User:
     """A class representing a user"""
@@ -47,7 +16,7 @@ class User:
     name: str
     hoursAlive: int = 0
     recordHoursAlive: int = 0
-    perks: dict = field(default_factory=lambda: dict(empty_perkset))
+    perks: dict = field(default_factory=lambda: dict())
     online: bool = False
     lastSeen: datetime = datetime(1, 1, 1)
     lastLocation: tuple = (0, 0)
