@@ -1,4 +1,5 @@
 from discord.ext import commands
+from discord.ext.commands import has_permissions
 import os
 from rcon.source import Client
 import re
@@ -16,6 +17,7 @@ class RCONAdapter(commands.Cog):
         self.rconPassword = os.getenv("RCON_PASSWORD")
 
     @commands.command()
+    @has_permissions(administrator=True)
     async def option(self, ctx, option: str, newValue: str = None):
         """Show or set the value of a server option"""
         if newValue is not None:
@@ -36,3 +38,14 @@ class RCONAdapter(commands.Cog):
                     await ctx.send("No matches found")
             except:
                 await ctx.send("Unable to send message")
+
+    @commands.command()
+    @has_permissions(administrator=True)
+    async def addxp(self, ctx, name: str = None, skill: str = None, amount: int = None):
+        """Add xp for a skill"""
+        if name is None or skill is None or amount is None:
+            await ctx.reply("requires three values: Name, skill and amount")
+            return
+        with Client(self.rconHost, self.rconPort, passwd=self.rconPassword, timeout=5.0) as client:
+            result = client.run(f"addxp \"{name}\" {skill}={amount}")
+            await ctx.send(result)
