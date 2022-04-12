@@ -46,9 +46,8 @@ class ChatHandler(commands.Cog):
         """Parse the given line from the logfile and mirror chat message in
         discord if necessary"""
 
-        # First ignore all the quickchat spam (jay...). "id = 2" seems to be the best way to identify these
-        # we also ignore chage messages which are showing images (ChatBubble mod)
-        if "id = 2" in message or "[img=" in message:
+        # Ignore anything that's not "General" chat
+        if "chat=General" not in message:
             return
 
         # Mirror any other received messages in the discord chat
