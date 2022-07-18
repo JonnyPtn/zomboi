@@ -18,6 +18,7 @@ class PerkHandler(commands.Cog):
         self.notifyJoin = os.getenv("JOINS", "True") == "True"
         self.notifyDeath = os.getenv("DEATHS", "True") == "True"
         self.notifyPerk = os.getenv("PERKS", "True") == "True"
+        self.notifyCreateChar = os.getenv("CREATECHAR", "True") == "True"
 
     def splitLine(self, line: str):
         """Split a log line into a timestamp and the remaining message"""
@@ -96,6 +97,12 @@ class PerkHandler(commands.Cog):
                 self.bot.log.info(f"{user.name} login")
                 if self.notifyJoin:
                     return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
+        elif "Created Player" in type:
+            if timestamp > self.lastUpdateTimestamp:
+                user.online = True
+                self.bot.log.info(f"{user.name} new character")
+                if self.notifyCreateChar:
+                    return f":person_raising_hand: {user.name} just woke up in the Apocalypse..."
         elif type == "Level Changed":
             match = re.search(r"\[(\w+)\]\[(\d+)\]", message)
             perk = match.group(1)
