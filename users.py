@@ -9,6 +9,8 @@ import re
 from tabulate import tabulate
 from typing import List
 
+DISCORD_MAX_CHAR = 2000
+
 @dataclass
 class User:
     """A class representing a user"""
@@ -123,7 +125,8 @@ class UserHandler(commands.Cog):
     @commands.command()
     async def users(self, ctx):
         """Return a list of users on the server with basic info"""
-        table = [["Name", "Online", "Last Seen", "Hours survived"]]
+        table = []
+        headers = ["Name", "Online", "Last Seen", "Hours survived"]
         for user in self.users.values():
             table.append(
                 [
@@ -133,9 +136,21 @@ class UserHandler(commands.Cog):
                     user.hoursAlive,
                 ]
             )
-        await ctx.send(
-            f'```\n{tabulate(table,headers="firstrow", tablefmt="fancy_grid")}\n```'
-        )
+        # For each message -> make sure they are under the char limit
+        # If not make a new table and then send a new message
+        # Definitely could be more efficient but it works lol
+        messages = [table]
+        x = 0
+        for message in messages:
+            while len(f'```\n{tabulate(messages[x], headers=headers, tablefmt="fancy_grid")}\n```') > DISCORD_MAX_CHAR:
+                if x == len(messages) - 1:
+                    messages.append([])
+                messages[x+1].append(messages[x][-1])
+                messages[x] = messages[x][0:-1]
+            await ctx.send(
+                f'```\n{tabulate(messages[x], headers=headers, tablefmt="fancy_grid")}\n```'
+            )
+            x += 1
 
     @commands.command()
     async def info(self, ctx, name=None):
