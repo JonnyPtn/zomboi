@@ -127,15 +127,18 @@ class UserHandler(commands.Cog):
         """Return a list of users on the server with basic info"""
         table = []
         headers = ["Name", "Online", "Last Seen", "Hours survived"]
+        # if the number of users is over 28 (two messages), then only show online users
+        num_users = len(self.users.values())
         for user in self.users.values():
-            table.append(
-                [
-                    user.name,
-                    "Yes" if user.online else "No",
-                    user.lastSeen.strftime("%d/%m at %H:%M"),
-                    user.hoursAlive,
-                ]
-            )
+            if num_users <= 28 or user.online:
+                table.append(
+                    [
+                        user.name,
+                        "Yes" if user.online else "No",
+                        user.lastSeen.strftime("%d/%m at %H:%M"),
+                        user.hoursAlive,
+                    ]
+                )
         # For each message -> make sure they are under the char limit
         # If not make a new table and then send a new message
         # Definitely could be more efficient but it works lol
