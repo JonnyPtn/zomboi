@@ -123,14 +123,19 @@ class UserHandler(commands.Cog):
                 self.bot.log.debug(f"Ignored: {message}")
 
     @commands.command()
-    async def users(self, ctx):
-        """Return a list of users on the server with basic info"""
+    async def users(self, ctx, arg: str = None):
+        """
+        Return a list of users on the server with basic info
+        If the user is online -- print all online users
+        if the arg "all" is supplied, show all users
+        """
         table = []
         headers = ["Name", "Online", "Last Seen", "Hours survived"]
         # if the number of users is over 28 (two messages), then only show online users
         num_users = len(self.users.values())
+        show_all = True if arg and arg.lower() == 'all' else False
         for user in self.users.values():
-            if num_users <= 28 or user.online:
+            if show_all or user.online:
                 table.append(
                     [
                         user.name,
