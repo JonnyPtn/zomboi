@@ -1,13 +1,14 @@
-from discord.ext import commands
+from discord.ext import tasks, commands
 from discord.ext.commands import has_permissions
 import os
-from rcon.source import Client
+from rcon.source import Client, rcon
 import re
+from datetime import datetime
 
 class RCONAdapter(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.rconHost = "localhost"
+        self.rconHost = os.getenv("RCON_HOST") if os.getenv("RCON_HOST") else "localhost"
         port = os.getenv("RCON_PORT")
         if port is None:            
             self.rconPort = 27015
@@ -15,6 +16,7 @@ class RCONAdapter(commands.Cog):
         else:
             self.rconPort = int(port)
         self.rconPassword = os.getenv("RCON_PASSWORD")
+        self.update.start()
 
     @commands.command()
     @has_permissions(administrator=True)
@@ -49,3 +51,39 @@ class RCONAdapter(commands.Cog):
         with Client(self.rconHost, self.rconPort, passwd=self.rconPassword, timeout=5.0) as client:
             result = client.run(f"addxp \"{name}\" {skill}={amount}")
             await ctx.send(result)
+
+    @tasks.loop(minutes=5)
+    async def update(self):
+        """sync players with syncplayers command"""
+        await self.syncplayers()
+
+    async def syncplayers(self):
+        """Syncs online players by checking number with rcon"""
+        if not self.rconPassword:
+            self.bot.log.warning('RCON password not set -- unable to syncplayers.')
+            self.update.stop()
+            return
+        self.bot.log.info('Checking rcon to see if the player counter is correct')
+        try:
+            response = await rcon(
+                'players',
+                host=self.rconHost, port=self.rconPort, passwd=self.rconPassword
+            )
+
+            # remove first line from response
+            response = ''.join(response.splitlines(keepends=True)[1:])
+
+            # update user info too
+            userHandler = self.bot.get_cog("UserHandler")
+            for user in userHandler.users.values():
+                if user.name in response:
+                    user.lastSeen = datetime.now()
+                    user.online = True
+                else:
+                    user.online = False
+            self.bot.log.info('Synced players successfully!')
+
+        except Exception as e:
+            self.bot.log.error(e)
+            self.bot.log.error('Unable to run players command on rcon -- check rcon options')
+            self.update.stop()
