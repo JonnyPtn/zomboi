@@ -77,9 +77,13 @@ class RCONAdapter(commands.Cog):
             userHandler = self.bot.get_cog("UserHandler")
             for user in userHandler.users.values():
                 if user.name in response:
+                    if user.online == False:
+                        self.bot.log.info(f'Player {user.name} out of sync, currently offline, should be online, fixing...')
                     user.lastSeen = datetime.now()
                     user.online = True
                 else:
+                    if user.online == True:
+                        self.bot.log.info(f'Player {user.name} out of sync, currently online, should be offline, fixing...')
                     user.online = False
             self.bot.log.info('Synced players successfully!')
 
