@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 from perks import PerkHandler
 from users import UserHandler
+from admin import AdminLogHandler
 from rcon_adapter import RCONAdapter
 
 load_dotenv(override=True)
@@ -70,6 +71,7 @@ async def on_ready():
     zomboi.add_cog(PerkHandler(zomboi, logPath))
     zomboi.add_cog(RCONAdapter(zomboi))
     zomboi.add_cog(MapHandler(zomboi))
+    zomboi.add_cog(AdminLogHandler(zomboi, logPath))
 
 
 # Always finally run the bot
