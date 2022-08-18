@@ -37,7 +37,7 @@ class PerkHandler(commands.Cog):
                     if timestamp > newTimestamp:
                         newTimestamp = timestamp
                     if timestamp > self.lastUpdateTimestamp:
-                        message = self.handleLog(timestamp, message)
+                        message = self.handleLog(timestamp, message, fromUpdate=True)
                         if message is not None and self.bot.channel is not None:
                             await self.bot.channel.send(message)
                     else:
@@ -59,13 +59,16 @@ class PerkHandler(commands.Cog):
 
     # Parse a line in the user log file and take appropriate action
 
-    def handleLog(self, timestamp: datetime, message: str):
+    def handleLog(self, timestamp: datetime, message: str, fromUpdate=False):
         # Ignore the id at the start of the message, no idea what it's for
         message = message[message.find("[", 2) + 1 :]
 
         # Next is the name which we use to get the user
         name, message = message.split("]", 1)
-        user = self.bot.get_cog("UserHandler").getUser(name)
+        userHandler = self.bot.get_cog("UserHandler")
+        user = userHandler.getUser(name)
+        char_name = userHandler.getCharName(name) if fromUpdate and user else None
+        log_char_string = 'aka ' + char_name + ' ' if char_name else ''
 
         # Then position which we set if it's more recent
         x = message[1 : message.find(",")]
@@ -90,19 +93,19 @@ class PerkHandler(commands.Cog):
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} died")
                 if self.notifyDeath:
-                    return f":zombie: {user.name} died after surviving {user.hoursAlive} hours :dizzy_face:"
+                    return f":zombie: {user.name} {log_char_string}died after surviving {user.hoursAlive} hours :dizzy_face:"
         elif type == "Login":
             if timestamp > self.lastUpdateTimestamp:
                 user.online = True
                 self.bot.log.info(f"{user.name} login")
                 if self.notifyJoin:
-                    return f":zombie: {user.name} has arrived, survived for {user.hoursAlive} hours so far..."
+                    return f":person_doing_cartwheel: {user.name} {log_char_string}has arrived, survived for {user.hoursAlive} hours so far..."
         elif "Created Player" in type:
             if timestamp > self.lastUpdateTimestamp:
                 user.online = True
                 self.bot.log.info(f"{user.name} new character")
                 if self.notifyCreateChar:
-                    return f":person_raising_hand: {user.name} just woke up in the Apocalypse..."
+                    return f":person_raising_hand: {user.name} {log_char_string}just woke up in the Apocalypse..."
         elif type == "Level Changed":
             match = re.search(r"\[(\w+)\]\[(\d+)\]", message)
             perk = match.group(1)
@@ -111,7 +114,7 @@ class PerkHandler(commands.Cog):
             if timestamp > self.lastUpdateTimestamp:
                 self.bot.log.info(f"{user.name} {perk} changed to {level}")
                 if self.notifyPerk:
-                    return f":chart_with_upwards_trend: {user.name} reached {perk} level {level}"
+                    return f":chart_with_upwards_trend: {user.name} {log_char_string}reached {perk} level {level}"
         else:
             # Must be a list of perks following a login/player creation
             for (name, value) in re.findall(r"(\w+)=(\d+)", type):
