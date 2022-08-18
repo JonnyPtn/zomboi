@@ -8,6 +8,8 @@ import os
 import re
 from tabulate import tabulate
 from typing import List
+from pathlib import Path
+import sqlite3
 
 DISCORD_MAX_CHAR = 2000
 
@@ -50,6 +52,29 @@ class UserHandler(commands.Cog):
         timestampStr, message = line.strip()[1:].split("]", 1)
         timestamp = datetime.strptime(timestampStr, "%d-%m-%y %H:%M:%S.%f")
         return timestamp, message
+
+    def getCharName(self, name: str):
+        """Looks through the db file to find the name of the user's character"""
+        # Needs to sleep to let database update after new character creation
+        from time import sleep
+        sleep(5)
+        try:
+            playerdb = Path(os.getenv("SAVES_PATH")).joinpath("players.db") if os.getenv("SAVES_PATH") else Path.home().joinpath("Zomboid/Saves/Multiplayer/pzserver").joinpath("players.db")
+            if not playerdb.is_file():
+                self.bot.log.error("Zomboid saves path was set incorrectly. Please check your environment variables")
+                return ''
+            # Connect to the sqlite player db
+            con = sqlite3.connect(str(playerdb))
+            cur = con.cursor()
+            # check the networkPlayers table
+            cur.execute('SELECT name FROM networkPlayers WHERE username = ?', [name])
+            charName = cur.fetchone()
+            charName = charName[0] if charName else None
+            con.close()
+        except Exception as e:
+            self.bot.log.error(e)
+            charName = None
+        return charName
 
     @tasks.loop(seconds=2)
     async def update(self):
