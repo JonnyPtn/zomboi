@@ -24,7 +24,7 @@ class AdminLogHandler(commands.Cog):
         self.adminChannel = os.getenv("ADMIN_CHANNEL")
         if not self.adminChannel:
             self.bot.log.warning("Unable to get admin channel, setting to default channel...")
-            self.adminChannel = self.bot.channel
+            self.adminChannel = self.bot.channel.name
         if self.adminChannel.isdigit():
             self.adminChannel = self.bot.get_channel(int(self.adminChannel))  # Find by id
         if isinstance(self.adminChannel, str):
