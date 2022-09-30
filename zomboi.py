@@ -66,12 +66,12 @@ async def on_ready():
         zomboi.log.warning("Unable to get channel, will not be enabled")
     else:
         zomboi.log.info("channel connected")
-    zomboi.add_cog(UserHandler(zomboi, logPath))
-    zomboi.add_cog(ChatHandler(zomboi, logPath))
-    zomboi.add_cog(PerkHandler(zomboi, logPath))
-    zomboi.add_cog(RCONAdapter(zomboi))
-    zomboi.add_cog(MapHandler(zomboi))
-    zomboi.add_cog(AdminLogHandler(zomboi, logPath))
+    await zomboi.add_cog(UserHandler(zomboi, logPath))
+    await zomboi.add_cog(ChatHandler(zomboi, logPath))
+    await zomboi.add_cog(PerkHandler(zomboi, logPath))
+    await zomboi.add_cog(RCONAdapter(zomboi))
+    await zomboi.add_cog(MapHandler(zomboi))
+    await zomboi.add_cog(AdminLogHandler(zomboi, logPath))
 
 
 # Always finally run the bot
