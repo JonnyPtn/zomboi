@@ -16,7 +16,7 @@ class RCONAdapter(commands.Cog):
         else:
             self.rconPort = int(port)
         self.rconPassword = os.getenv("RCON_PASSWORD")
-        self.update.start()
+        self.syncplayers.start()
 
     @commands.command()
     @has_permissions(administrator=True)
@@ -53,10 +53,6 @@ class RCONAdapter(commands.Cog):
             await ctx.send(result)
 
     @tasks.loop(minutes=5)
-    async def update(self):
-        """sync players with syncplayers command"""
-        await self.syncplayers()
-
     async def syncplayers(self):
         """Syncs online players by checking number with rcon"""
         if not self.rconPassword:
@@ -69,25 +65,25 @@ class RCONAdapter(commands.Cog):
                 'players',
                 host=self.rconHost, port=self.rconPort, passwd=self.rconPassword
             )
-
-            # remove first line from response
-            response = ''.join(response.splitlines(keepends=True)[1:])
-
-            # update user info too
-            userHandler = self.bot.get_cog("UserHandler")
-            for user in userHandler.users.values():
-                if user.name in response:
-                    if user.online == False:
-                        self.bot.log.info(f'Player {user.name} out of sync, currently offline, should be online, fixing...')
-                    user.lastSeen = datetime.now()
-                    user.online = True
-                else:
-                    if user.online == True:
-                        self.bot.log.info(f'Player {user.name} out of sync, currently online, should be offline, fixing...')
-                    user.online = False
-            self.bot.log.info('Synced players successfully!')
-
         except Exception as e:
             self.bot.log.error(e)
             self.bot.log.error('Unable to run players command on rcon -- check rcon options')
-            self.update.stop()
+            self.syncplayers.stop()
+            return
+
+        # remove first line from response
+        response = ''.join(response.splitlines(keepends=True)[1:])
+
+        # update user info too
+        userHandler = self.bot.get_cog("UserHandler")
+        for user in userHandler.users.values():
+            if user.name in response:
+                if user.online == False:
+                    self.bot.log.info(f'Player {user.name} out of sync, currently offline, should be online, fixing...')
+                user.lastSeen = datetime.now()
+                user.online = True
+            else:
+                if user.online == True:
+                    self.bot.log.info(f'Player {user.name} out of sync, currently online, should be offline, fixing...')
+                user.online = False
+        self.bot.log.info('Synced players successfully!')
