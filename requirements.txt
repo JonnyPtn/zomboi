@@ -1,7 +1,6 @@
-discord
-file-read-backwards
-watchdog
-tabulate
-pillow
-python-dotenv
-rcon
+discord.py==2.0.1
+file_read_backwards==2.0.0
+Pillow==9.2.0
+python-dotenv==0.21.0
+rcon==2.1.1
+tabulate==0.8.10
