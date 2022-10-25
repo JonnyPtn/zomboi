@@ -29,6 +29,7 @@ if logPath is None or len(logPath) == 0:
 intents = discord.Intents.default()
 intents.members = True
 intents.guilds = True
+intents.message_content = True
 zomboi = commands.bot.Bot("!", intents=intents)
 
 # Redirect the discord log to a file
