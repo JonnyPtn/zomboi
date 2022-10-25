@@ -66,7 +66,7 @@ class ChatHandler(commands.Cog):
             avatar_url = None
             for member in self.bot.get_all_members():
                 if match.group(1) in member.name:
-                    avatar_url = member.avatar_url
+                    avatar_url = member.display_avatar
             await self.webhook.send(
                 match.group(2), username=name, avatar_url=avatar_url
             )
