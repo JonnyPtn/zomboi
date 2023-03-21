@@ -30,7 +30,7 @@ class ChatHandler(commands.Cog):
         """
         files = glob.glob(self.logPath + "/*chat.txt")
         if len(files) > 0:
-            with FileReadBackwards(files[0], encoding="latin-1") as f:
+            with FileReadBackwards(files[0], encoding="utf-8") as f:
                 newTimestamp = self.lastUpdateTimestamp
                 for line in f:
                     timestamp, message = self.splitLine(line)
