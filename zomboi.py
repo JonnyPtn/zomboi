@@ -57,7 +57,9 @@ zomboi.log.setLevel(logging.DEBUG)
 async def on_ready():
     zomboi.log.info(f"We have logged in as {zomboi.user}")
     channel = os.getenv("CHANNEL")
-    zomboi.channel = zomboi.get_channel(int(channel)) if channel.isdigit() else None  # Find by id
+    zomboi.channel = (  # Find by id
+        zomboi.get_channel(int(channel)) if channel.isdigit() else None
+    )
     if zomboi.channel is None:
         zomboi.channel = discord.utils.get(
             zomboi.get_all_channels(), name=channel
