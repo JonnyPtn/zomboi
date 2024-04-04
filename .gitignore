@@ -1,0 +1,7 @@
+﻿/.vs
+/bin
+/obj
+/server
+/Properties
+/steamcmd*
+/*.user
