@@ -5,3 +5,5 @@
 /Properties
 /steamcmd*
 /*.user
+/.idea
+.DS_Store
