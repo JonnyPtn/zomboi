@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Discord.Net;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -56,7 +57,26 @@ namespace zomboi
 
             await m_serviceProvider.GetRequiredService<InteractionHandler>().InitializeAsync();
 
-            await client.LoginAsync(TokenType.Bot, m_configuration["TOKEN"]);
+            // Set the ZOMBOI_TOKEN environment variable to the discord bot token
+            var token = m_configuration["TOKEN"];
+
+            if (token == null)
+            {
+                Logger.Error("Token not found, set ZOMBOI_TOKEN environment variable to your discord bot token");
+                return;
+            } 
+            else if (token.Length == 0)
+            {
+                Logger.Error("Token is empty");
+                return;
+            }
+            else if (token.Trim().Length == 0)
+            {
+                Logger.Error("Token is only whitespace");
+                return;
+            }
+
+            await client.LoginAsync(TokenType.Bot, token); 
             await client.StartAsync();
 
             await Task.Delay(Timeout.Infinite);
