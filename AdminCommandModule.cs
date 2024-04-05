@@ -1,13 +1,10 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Discord.Net;
-using Discord.WebSocket;
 
 namespace zomboi
 {
     public class AdminCommandModule : InteractionModuleBase<SocketInteractionContext>
     {
-
         [DefaultMemberPermissions(GuildPermission.Administrator)]
         [SlashCommand("start", "Start the server")]
         public async Task Start()
