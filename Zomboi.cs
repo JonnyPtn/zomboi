@@ -1,6 +1,5 @@
 ﻿using Discord;
 using Discord.Interactions;
-using Discord.Net;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,7 +34,8 @@ namespace zomboi
         public Zomboi()
         {
             m_configuration = new ConfigurationBuilder()
-                .AddEnvironmentVariables(prefix: "ZOMBOI_")
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddIniFile("zomboi.ini")
                 .Build();
 
             m_serviceProvider = new ServiceCollection()
@@ -44,6 +44,7 @@ namespace zomboi
                 .AddSingleton<DiscordSocketClient>()
                 .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()))
                 .AddSingleton<InteractionHandler>()
+                .AddSingleton<UserListener>(x => new UserListener(x.GetRequiredService<DiscordSocketClient>()))
                 .BuildServiceProvider();
         }
         static void Main(string[] args)
@@ -58,11 +59,11 @@ namespace zomboi
             await m_serviceProvider.GetRequiredService<InteractionHandler>().InitializeAsync();
 
             // Set the ZOMBOI_TOKEN environment variable to the discord bot token
-            var token = m_configuration["TOKEN"];
+            var token = m_configuration["bot:token"];
 
             if (token == null)
             {
-                Logger.Error("Token not found, set ZOMBOI_TOKEN environment variable to your discord bot token");
+                Logger.Error("Token cannot be null");
                 return;
             } 
             else if (token.Length == 0)
@@ -75,8 +76,20 @@ namespace zomboi
                 Logger.Error("Token is only whitespace");
                 return;
             }
+            
+            // If the server already exists just automatically start it
+            if (Server.IsCreated)
+            {
+                Server.Start();
+            }
 
-            await client.LoginAsync(TokenType.Bot, token); 
+            // Once we're logged in, set up our channels
+            client.Ready += () => {
+                m_serviceProvider.GetRequiredService<UserListener>().SetChannel(m_configuration["bot:users channel"]);
+                return Task.CompletedTask;
+            };
+
+            await client.LoginAsync(TokenType.Bot, token);
             await client.StartAsync();
 
             await Task.Delay(Timeout.Infinite);

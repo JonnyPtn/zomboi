@@ -14,6 +14,7 @@ namespace zomboi
         public static bool IsRunning { get { return serverProcess.StartInfo.FileName.Length > 0 && !serverProcess.HasExited; } }
         public static bool IsInstalled { get { return Directory.Exists(serverPath); } }
         public static bool IsCreated { get { return File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini")); } }
+        public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Logs")); } }
         public static bool Start()
         {
             serverProcess.StartInfo.FileName = serverStartPath;
