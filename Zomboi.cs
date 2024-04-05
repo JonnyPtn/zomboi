@@ -89,6 +89,9 @@ namespace zomboi
                 return Task.CompletedTask;
             };
 
+            // Add the message component handlers
+            client.ButtonExecuted += AdminCommandModule.ServerButtonHandler;
+
             await client.LoginAsync(TokenType.Bot, token);
             await client.StartAsync();
 

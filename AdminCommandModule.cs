@@ -1,58 +1,47 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 
 namespace zomboi
 {
     public class AdminCommandModule : InteractionModuleBase<SocketInteractionContext>
     {
+        private const string serverStartID = "server-start";
+        private const string serverStopID = "server-stop";
         [DefaultMemberPermissions(GuildPermission.Administrator)]
-        [SlashCommand("start", "Start the server")]
-        public async Task Start()
+        [SlashCommand("server", "Server management options")]
+        public async Task ManageServer()
         {
             if (!Server.IsInstalled)
             {
                 await RespondAsync("Server not installed, use /install command", ephemeral: true);
+                return;
             }
             else if (!Server.IsCreated)
             {
                 await RespondAsync("Server not created, use /create command", ephemeral: true);
+                return;
             }
-            else if (Server.IsRunning)
-            {
-                await RespondAsync("Server already running, did you mean /restart?", ephemeral: true);
-            }
-            else
-            {
-                if (Server.Start())
-                {
-                    await RespondAsync("Server started", ephemeral: true);
-                }
-                else
-                {
-                    await RespondAsync("Failed to start server", ephemeral: true);
-                }
-            }
+
+            var builder = new ComponentBuilder()
+                 .WithButton("Start", serverStartID, style: ButtonStyle.Success)
+                 .WithButton("Stop", serverStopID, style: ButtonStyle.Danger);
+
+            await RespondAsync("Server options:", components: builder.Build(), ephemeral: true);
         }
 
-        [DefaultMemberPermissions(GuildPermission.Administrator)]
-        [SlashCommand("stop", "Stop the server")]
-        public async Task Stop()
+        public static async Task ServerButtonHandler(SocketMessageComponent component)
         {
-            if (!Server.IsInstalled)
+            switch (component.Data.CustomId)
             {
-                await RespondAsync("Server not installed, use /install command", ephemeral: true);
-            }
-            else if (!Server.IsCreated)
-            {
-                await RespondAsync("Server not created, use /create command", ephemeral: true);
-            }
-            else if (!Server.IsRunning)
-            {
-                await RespondAsync("Server isn't running", ephemeral: true);
-            }
-            else
-            {
-               await Server.Stop();
+                case serverStartID:
+                    Server.Start();
+                    await component.RespondAsync("Starting server", ephemeral: true);
+                    break;
+                case serverStopID:
+                    await Server.Stop();
+                    await component.RespondAsync("Stopping server", ephemeral: true);
+                    break;
             }
         }
 
