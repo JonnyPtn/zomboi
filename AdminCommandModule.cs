@@ -35,12 +35,12 @@ namespace zomboi
             switch (component.Data.CustomId)
             {
                 case serverStartID:
-                    Server.Start();
                     await component.RespondAsync("Starting server", ephemeral: true);
+                    Server.Start();
                     break;
                 case serverStopID:
-                    await Server.Stop();
                     await component.RespondAsync("Stopping server", ephemeral: true);
+                    await Server.Stop();
                     break;
             }
         }
@@ -65,9 +65,9 @@ namespace zomboi
         [SlashCommand("install", "Install (or update the server from steam")]
         public async Task Install()
         {
-            await RespondAsync("Installing Server, please wait...");
+            await RespondAsync("Installing Server, please wait...", ephemeral: true);
             await Server.Install();
-            await FollowupAsync("Server Installed");
+            await FollowupAsync("Server Installed", ephemeral: true);
         }
     }
 }
