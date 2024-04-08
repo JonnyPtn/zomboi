@@ -102,7 +102,14 @@ namespace zomboi
             await DownloadSteamCMD();
 
             Process process = new();
-            process.StartInfo.FileName = "steamcmd/steamcmd";
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                process.StartInfo.FileName = "steamcmd/steamcmd.sh";
+            }
+            else
+            {
+                process.StartInfo.FileName = "steamcmd/steamcmd";
+            }
             process.StartInfo.Arguments = "+runscript ../update_server.txt";
             process.StartInfo.WorkingDirectory = Environment.CurrentDirectory;
             process.Start();
