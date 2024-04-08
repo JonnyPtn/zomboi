@@ -4,7 +4,7 @@ using Discord.WebSocket;
 
 namespace zomboi
 {
-    public class UserListener
+    public class Playerlistener
     {
         private readonly DiscordSocketClient m_client;
         private readonly FileSystemWatcher m_watcher;
@@ -12,7 +12,7 @@ namespace zomboi
         private StreamReader? m_fileStreamReader;
         private DateTime m_lastUpdate = DateTime.Now;
         private IMessageChannel? m_channel;
-        public UserListener(DiscordSocketClient client)
+        public Playerlistener(DiscordSocketClient client)
         {
             m_client = client;
 
@@ -85,6 +85,7 @@ namespace zomboi
                         var firstQuote = logLine.Message.IndexOf("\"");
                         var lastQuote = logLine.Message.LastIndexOf("\"");
                         var name = logLine.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
+                        Server.players.Add(new Player(name));
                         await m_channel.SendMessageAsync($":wave: {name} has connected");
                     }
                     else if (logLine.Message.Contains("disconnected"))
@@ -93,6 +94,7 @@ namespace zomboi
                         var firstQuote = logLine.Message.IndexOf("\"");
                         var lastQuote = logLine.Message.LastIndexOf("\"");
                         var name = logLine.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
+                        Server.players.RemoveAll(x => x.Name == name);
                         await m_channel.SendMessageAsync($":runner: {name} has disconnected");
                     }
                 }

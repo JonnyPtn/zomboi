@@ -13,7 +13,7 @@ namespace zomboi
 
         private readonly DiscordSocketConfig m_socketConfig = new()
         {
-            GatewayIntents = GatewayIntents.All,
+            GatewayIntents = GatewayIntents.Guilds | GatewayIntents.GuildMembers,
             AlwaysDownloadUsers = true
         };
 
@@ -44,7 +44,7 @@ namespace zomboi
                 .AddSingleton<DiscordSocketClient>()
                 .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()))
                 .AddSingleton<InteractionHandler>()
-                .AddSingleton<UserListener>(x => new UserListener(x.GetRequiredService<DiscordSocketClient>()))
+                .AddSingleton<Playerlistener>(x => new Playerlistener(x.GetRequiredService<DiscordSocketClient>()))
                 .BuildServiceProvider();
         }
         static void Main(string[] args)
@@ -78,14 +78,14 @@ namespace zomboi
             }
             
             // If the server already exists just automatically start it
-            if (Server.IsCreated)
+            if (Server.IsInstalled && Server.IsCreated)
             {
                 Server.Start();
             }
 
             // Once we're logged in, set up our channels
             client.Ready += () => {
-                m_serviceProvider.GetRequiredService<UserListener>().SetChannel(m_configuration["bot:users channel"]);
+                m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(m_configuration["bot:users channel"]);
                 return Task.CompletedTask;
             };
 
