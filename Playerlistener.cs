@@ -17,6 +17,7 @@ namespace zomboi
         {
             m_client = client;
 
+            Directory.CreateDirectory(Server.LogFolderPath);
             m_watcher = new(Server.LogFolderPath);
             m_watcher.NotifyFilter =
                 NotifyFilters.FileName |
