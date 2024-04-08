@@ -3,3 +3,5 @@
 token = 
 # The channel ID for user notifications, in discord right click and copy a link to a channel, the ID will be on the end e.g. https://discord.com/channels/<server_id>/<channel_id>
 users channel = 
+# The channel ID for chat mirroring
+chat channel = 

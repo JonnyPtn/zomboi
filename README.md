@@ -13,6 +13,7 @@ This is also an exercise for me to learn c# better so if you are experienced and
 
 ## Notifications
 - User join/leave notifications
+- Chat mirrored from Global in-game chat (Only game -> discord mirroring, not the other way round yet)
 
 ### Quick start
 

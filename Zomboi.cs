@@ -44,7 +44,8 @@ namespace zomboi
                 .AddSingleton<DiscordSocketClient>()
                 .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()))
                 .AddSingleton<InteractionHandler>()
-                .AddSingleton<Playerlistener>(x => new Playerlistener(x.GetRequiredService<DiscordSocketClient>()))
+                .AddSingleton(x => new Playerlistener(x.GetRequiredService<DiscordSocketClient>()))
+                .AddSingleton(x => new ChatListener(x.GetRequiredService<DiscordSocketClient>()))
                 .BuildServiceProvider();
         }
         static void Main(string[] args)
@@ -86,6 +87,7 @@ namespace zomboi
             // Once we're logged in, set up our channels
             client.Ready += () => {
                 m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(m_configuration["bot:users channel"]);
+                m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(m_configuration["bot:chat channel"]);
                 return Task.CompletedTask;
             };
 
