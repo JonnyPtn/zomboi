@@ -20,8 +20,12 @@ namespace zomboi
             else
             {
                 var builder = new EmbedBuilder()
-                    .WithTitle("Players")
-                    .WithDescription(string.Join("\n", Server.players.Select(x => x.Name)));
+                    .WithTitle("Players");
+
+                foreach (var player in Server.players)
+                {
+                    builder.AddField(player.Name, $"Last seen: {player.LastSeen.ToShortDateString()} {player.LastSeen.ToShortTimeString()} at {player.Position.ToString()}");
+                }
                 await RespondAsync(embed: builder.Build(), ephemeral: true);
             }
         }

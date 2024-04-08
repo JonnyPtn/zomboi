@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using System.Numerics;
 
 namespace zomboi
 {
@@ -85,7 +86,15 @@ namespace zomboi
                         var firstQuote = logLine.Message.IndexOf("\"");
                         var lastQuote = logLine.Message.LastIndexOf("\"");
                         var name = logLine.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-                        Server.players.Add(new Player(name));
+
+                        // And the position will be in parentheses like (x,y,...) not sure what the last param is... floor?
+                        var firstParen = logLine.Message.IndexOf("(");
+                        var lastComma = logLine.Message.LastIndexOf(",");
+                        var positionString = logLine.Message.Substring(firstParen + 1, lastComma - firstParen - 1); 
+                        var positions = positionString.Split(',');
+                        var position = new Vector2(int.Parse(positions[0]), int.Parse(positions[1]));
+
+                        Server.players.Add(new Player(name, logLine.TimeStamp, position));
                         await m_channel.SendMessageAsync($":wave: {name} has connected");
                     }
                     else if (logLine.Message.Contains("disconnected"))
