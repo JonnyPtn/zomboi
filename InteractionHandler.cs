@@ -28,9 +28,6 @@ public class InteractionHandler
 
         // Process the InteractionCreated payloads to execute Interactions commands
         m_client.InteractionCreated += HandleInteraction;
-
-        // Also process the result of the command execution.
-        m_service.InteractionExecuted += HandleInteractionExecute;
     }
 
     private async Task ReadyAsync()
@@ -67,18 +64,5 @@ public class InteractionHandler
             if (interaction.Type is InteractionType.ApplicationCommand)
                 await interaction.GetOriginalResponseAsync().ContinueWith(async (msg) => await msg.Result.DeleteAsync());
         }
-    }
-
-    private async Task HandleInteractionExecute(ICommandInfo commandInfo, IInteractionContext context, IResult result)
-    {
-        if (!result.IsSuccess)
-            switch (result.Error)
-            {
-                case InteractionCommandError.UnmetPrecondition:
-                    // implement
-                    break;
-                default:
-                    break;
-            }
     }
 }

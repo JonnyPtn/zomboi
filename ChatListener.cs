@@ -67,9 +67,9 @@ namespace zomboi
             }
         }
 
-        private async void OnCreated(object sender, FileSystemEventArgs e)
+        private void OnCreated(object sender, FileSystemEventArgs e)
         {
-            m_fileStream = new FileStream(Path.Combine(Server.LogFolderPath,e.FullPath), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            m_fileStream = new FileStream(Path.Combine(Server.LogFolderPath, e.FullPath), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
             m_fileStreamReader = new StreamReader(m_fileStream);
         }
 

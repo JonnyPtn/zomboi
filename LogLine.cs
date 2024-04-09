@@ -8,12 +8,12 @@ namespace zomboi
     {
         public LogLine(string line)
         {
+            Message = line.Substring(line.IndexOf(']') + 2);
             try
             {
                 // Format should be "[timestamp] message" so split based on that
                 var timestampStr = line.Substring(line.IndexOf('[') + 1, (line.IndexOf(']') - line.IndexOf('[') - 1));
                 TimeStamp = DateTime.ParseExact(timestampStr, "dd-MM-yy HH:mm:ss.fff", CultureInfo.InvariantCulture);
-                Message = line.Substring(line.IndexOf(']') + 2);
             }
             catch (FormatException ex)
             {
