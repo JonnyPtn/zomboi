@@ -1,6 +1,8 @@
-﻿using Discord;
+﻿using System.Data.Common;
+using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace zomboi
 {
@@ -8,6 +10,16 @@ namespace zomboi
     {
         private const string serverStartID = "server-start";
         private const string serverStopID = "server-stop";
+        private readonly IServiceProvider m_provider;
+        private readonly Server m_server;
+
+        public AdminCommandModule(IServiceProvider provider)
+        {
+            m_provider = provider;
+            m_server =  provider.GetRequiredService<Server>();
+            provider.GetRequiredService<DiscordSocketClient>().ButtonExecuted += ServerButtonHandler;
+        }
+
         [DefaultMemberPermissions(GuildPermission.Administrator)]
         [SlashCommand("server", "Server management options")]
         public async Task ManageServer()
@@ -30,17 +42,17 @@ namespace zomboi
             await RespondAsync("Server options:", components: builder.Build(), ephemeral: true);
         }
 
-        public static async Task ServerButtonHandler(SocketMessageComponent component)
+        public async Task ServerButtonHandler(SocketMessageComponent component)
         {
             switch (component.Data.CustomId)
             {
                 case serverStartID:
                     await component.RespondAsync("Starting server", ephemeral: true);
-                    Server.Start();
+                    await m_server.Start();
                     break;
                 case serverStopID:
                     await component.RespondAsync("Stopping server", ephemeral: true);
-                    await Server.Stop();
+                    await m_server.Stop();
                     break;
             }
         }
@@ -56,7 +68,7 @@ namespace zomboi
             else
             {
                 await RespondAsync("Creating server, please wait...", ephemeral: true);
-                await Server.Create(password);
+                await m_server.Create(password);
                 await FollowupAsync("Server created succesfully", ephemeral: true);
             }
         }
@@ -66,7 +78,7 @@ namespace zomboi
         public async Task Install()
         {
             await RespondAsync("Installing Server, please wait...", ephemeral: true);
-            await Server.Install();
+            await m_server.Install();
             await FollowupAsync("Server Installed", ephemeral: true);
         }
     }

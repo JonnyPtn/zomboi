@@ -1,19 +1,22 @@
 ﻿using Discord;
 using Discord.Interactions;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace zomboi
 {
     public class PlayerCommandModule : InteractionModuleBase<SocketInteractionContext>
     {
+        private readonly IServiceProvider m_provider;
+        public PlayerCommandModule(IServiceProvider provider)
+        {
+            m_provider = provider;
+        }
+
         [SlashCommand("players", "List the current players")]
         public async Task Players()
         {
-            if (Server.players.Count == 0)
+            var server = m_provider.GetRequiredService<Server>();
+            if (server.players.Count == 0)
             {
                 await RespondAsync("No players currently connected", ephemeral: true);
             }
@@ -22,7 +25,7 @@ namespace zomboi
                 var builder = new EmbedBuilder()
                     .WithTitle("Players");
 
-                foreach (var player in Server.players)
+                foreach (var player in server.players)
                 {
                     builder.AddField(player.Name, $"Last seen: {player.LastSeen.ToShortDateString()} {player.LastSeen.ToShortTimeString()} at {player.Position.ToString()}");
                 }

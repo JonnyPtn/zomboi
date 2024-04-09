@@ -44,7 +44,8 @@ namespace zomboi
                 .AddSingleton<DiscordSocketClient>()
                 .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()))
                 .AddSingleton<InteractionHandler>()
-                .AddSingleton(x => new Playerlistener(x.GetRequiredService<DiscordSocketClient>()))
+                .AddSingleton<Playerlistener>()
+                .AddSingleton<Server>()
                 .AddSingleton(x => new ChatListener(x.GetRequiredService<DiscordSocketClient>()))
                 .BuildServiceProvider();
         }
@@ -81,18 +82,15 @@ namespace zomboi
             // If the server already exists just automatically start it
             if (Server.IsInstalled && Server.IsCreated)
             {
-                Server.Start();
+                await m_serviceProvider.GetRequiredService<Server>().Start();
             }
 
             // Once we're logged in, set up our channels
             client.Ready += () => {
-                m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(m_configuration["bot:users channel"]);
-                m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(m_configuration["bot:chat channel"]);
+                m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(m_configuration["bot:users channel"]??"");
+                m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(m_configuration["bot:chat channel"]??"");
                 return Task.CompletedTask;
             };
-
-            // Add the message component handlers
-            client.ButtonExecuted += AdminCommandModule.ServerButtonHandler;
 
             await client.LoginAsync(TokenType.Bot, token);
             await client.StartAsync();

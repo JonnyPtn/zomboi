@@ -14,6 +14,7 @@ namespace zomboi
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Error.WriteLine(message);
+            Console.ResetColor();
             if (Debugger.IsAttached)
             {
                 Debugger.Break();
@@ -22,8 +23,19 @@ namespace zomboi
 
         public static void Info(string message)
         {
-            Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine(message);
         }
+
+        public static void Warn(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.DarkYellow;
+            Console.Error.WriteLine(message);
+            Console.ResetColor();
+            if (Debugger.IsAttached)
+            {
+                Debugger.Break();
+            }
+        }
+
     }
 }

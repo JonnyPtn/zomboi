@@ -28,7 +28,7 @@ namespace zomboi
             m_watcher.Filter = "*chat.txt";
             m_watcher.EnableRaisingEvents = true;
             m_watcher.Changed += OnChanged;
-            m_watcher.Created += OnChanged;
+            m_watcher.Created += OnCreated;
             m_watcher.Error += OnError;
         }
 
@@ -67,6 +67,12 @@ namespace zomboi
             }
         }
 
+        private async void OnCreated(object sender, FileSystemEventArgs e)
+        {
+            m_fileStream = new FileStream(Path.Combine(Server.LogFolderPath,e.FullPath), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+            m_fileStreamReader = new StreamReader(m_fileStream);
+        }
+
         private async void OnChanged(object sender, FileSystemEventArgs e)
         {
 
@@ -90,11 +96,15 @@ namespace zomboi
                 return;
             }
 
-            // Update our file stream if needed
-            if (m_fileStream == null || m_fileStreamReader == null || !m_fileStream.Name.Equals(e.Name, StringComparison.OrdinalIgnoreCase))
+            if (m_fileStream == null || m_fileStreamReader == null)
             {
-                m_fileStream = new FileStream(Path.Combine(Server.LogFolderPath,e.Name), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-                m_fileStreamReader = new StreamReader(m_fileStream);
+                Logger.Error("File stream not opened");
+                return;
+            }
+
+            if(!m_fileStream.Name.Equals(e.FullPath, StringComparison.OrdinalIgnoreCase))
+            {
+                Logger.Warn($"unexpected file chamge: {e.Name}");
             }
 
             var line = m_fileStreamReader.ReadLine();

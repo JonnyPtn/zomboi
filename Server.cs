@@ -2,6 +2,8 @@
 using System.Formats.Tar;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using Discord;
+using Discord.WebSocket;
 
 namespace zomboi
 {
@@ -29,24 +31,43 @@ namespace zomboi
         public static bool IsInstalled { get { return Directory.Exists(serverPath); } }
         public static bool IsCreated { get { return File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini")); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Logs")); } }
-        public static List<Player> players = new List<Player>();
-        public static bool Start()
+        public List<Player> players = new List<Player>();
+        private readonly DiscordSocketClient m_client;
+        public Server(DiscordSocketClient client)
         {
+            m_client = client;
+        }
+        public async Task<bool> Start()
+        {
+            await m_client.SetActivityAsync(new Game("Starting", ActivityType.Listening, ActivityProperties.Embedded));
             serverProcess.StartInfo.FileName = StartPath;
             serverProcess.StartInfo.RedirectStandardInput = true;
-            serverProcess.Start();
+            if (serverProcess.Start())
+            {
+                await m_client.SetActivityAsync(new Game("Project Zomboid", ActivityType.Playing, ActivityProperties.None));
+                await m_client.SetStatusAsync(UserStatus.Online);
+            }
+            else
+            {
+                Logger.Error($"Failed to start server {serverProcess.StandardError}");
+            }
             return IsRunning;
         }
 
-        public static async Task Stop()
+        public async Task Stop()
         {
+            await m_client.SetActivityAsync(new Game("Stopping", ActivityType.Watching, ActivityProperties.Spectate));
             await serverProcess.StandardInput.WriteLineAsync("save");
             await serverProcess.StandardInput.WriteLineAsync("quit");
             await serverProcess.WaitForExitAsync();
+            await m_client.SetStatusAsync(UserStatus.AFK);
+            await m_client.SetActivityAsync(null);
         }
 
-        private static async Task DownloadSteamCMD()
+        private async Task DownloadSteamCMD()
         {
+            await m_client.SetActivityAsync(new Game("updating steam", ActivityType.Streaming, ActivityProperties.Sync));
+            await m_client.SetStatusAsync(UserStatus.DoNotDisturb);
             var downloadFile = "steamcmd.file";
             if (!File.Exists(downloadFile))
             {
@@ -97,9 +118,12 @@ namespace zomboi
             }
         }
 
-        public static async Task Install()
+        public async Task Install()
         {
             await DownloadSteamCMD();
+
+            await m_client.SetActivityAsync(new Game("updating game", ActivityType.Streaming, ActivityProperties.Sync));
+            await m_client.SetStatusAsync(UserStatus.DoNotDisturb);
 
             Process process = new();
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
@@ -125,9 +149,9 @@ namespace zomboi
             }
         }
 
-        public static async Task Create(string password)
+        public async Task Create(string password)
         {
-            Start();
+            await Start();
             await serverProcess.StandardInput.WriteLineAsync(password); // Set the password
             await serverProcess.StandardInput.WriteLineAsync(password); // Confirm the password
             await Stop();

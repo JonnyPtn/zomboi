@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 using System.Numerics;
 
 namespace zomboi
@@ -13,13 +14,18 @@ namespace zomboi
         private StreamReader? m_fileStreamReader;
         private DateTime m_lastUpdate = DateTime.Now;
         private IMessageChannel? m_channel;
-        public Playerlistener(DiscordSocketClient client)
+        private readonly IServiceProvider m_provider;
+        private readonly Server m_server;
+        public Playerlistener(IServiceProvider provider)
         {
-            m_client = client;
+            m_provider = provider;
+            m_client = provider.GetRequiredService<DiscordSocketClient>();
+            m_server = provider.GetRequiredService<Server>();
 
             Directory.CreateDirectory(Server.LogFolderPath);
-            m_watcher = new(Server.LogFolderPath);
-            m_watcher.NotifyFilter =
+            m_watcher = new(Server.LogFolderPath)
+            {
+                NotifyFilter =
                 NotifyFilters.FileName |
                 NotifyFilters.DirectoryName |
                 NotifyFilters.LastWrite |
@@ -27,9 +33,10 @@ namespace zomboi
                 NotifyFilters.CreationTime |
                 NotifyFilters.LastAccess |
                 NotifyFilters.Attributes |
-                NotifyFilters.Size;
-            m_watcher.Filter = "*user.txt";
-            m_watcher.EnableRaisingEvents = true;
+                NotifyFilters.Size,
+                Filter = "*user.txt",
+                EnableRaisingEvents = true
+            };
             m_watcher.Changed += OnChanged;
             m_watcher.Created += OnChanged;
             m_watcher.Error += OnError;
@@ -43,7 +50,7 @@ namespace zomboi
                 return;
             }
             var channel = m_client.GetChannel(ulong.Parse(channelID));
-            m_channel = m_client.GetChannel(ulong.Parse(channelID)) as IMessageChannel;
+            m_channel = channel as IMessageChannel;
             if (m_channel == null)
             {
                 Logger.Error($"Channel ID {channelID} does not appear to be valid");
@@ -95,7 +102,7 @@ namespace zomboi
                         var positions = positionString.Split(',');
                         var position = new Vector2(int.Parse(positions[0]), int.Parse(positions[1]));
 
-                        Server.players.Add(new Player(name, logLine.TimeStamp, position));
+                        m_server.players.Add(new Player(name, logLine.TimeStamp, position));
                         await m_channel.SendMessageAsync($":wave: {name} has connected");
                     }
                     else if (logLine.Message.Contains("disconnected"))
@@ -104,7 +111,7 @@ namespace zomboi
                         var firstQuote = logLine.Message.IndexOf("\"");
                         var lastQuote = logLine.Message.LastIndexOf("\"");
                         var name = logLine.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-                        Server.players.RemoveAll(x => x.Name == name);
+                        m_server.players.RemoveAll(x => x.Name == name);
                         await m_channel.SendMessageAsync($":runner: {name} has disconnected");
                     }
                 }
