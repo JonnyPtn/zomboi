@@ -25,9 +25,9 @@ namespace zomboi
                 return $"{serverPath}/start-server.sh";
             }
         }}
-        private static readonly Process serverProcess = new();
+        private readonly Process m_process = new();
 
-        public static bool IsRunning { get { return serverProcess.StartInfo.FileName.Length > 0 && !serverProcess.HasExited; } }
+        public bool IsRunning { get { return m_process.StartInfo.FileName.Length > 0 && !m_process.HasExited; } }
         public static bool IsInstalled { get { return Directory.Exists(serverPath); } }
         public static bool IsCreated { get { return File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini")); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Logs")); } }
@@ -37,19 +37,20 @@ namespace zomboi
         {
             m_client = client;
         }
+        
         public async Task<bool> Start()
         {
             await m_client.SetActivityAsync(new Game("Starting", ActivityType.Listening, ActivityProperties.Embedded));
-            serverProcess.StartInfo.FileName = StartPath;
-            serverProcess.StartInfo.RedirectStandardInput = true;
-            if (serverProcess.Start())
+            m_process.StartInfo.FileName = StartPath;
+            m_process.StartInfo.RedirectStandardInput = true;
+            if (m_process.Start())
             {
                 await m_client.SetActivityAsync(new Game("Project Zomboid", ActivityType.Playing, ActivityProperties.None));
                 await m_client.SetStatusAsync(UserStatus.Online);
             }
             else
             {
-                Logger.Error($"Failed to start server {serverProcess.StandardError}");
+                Logger.Error($"Failed to start server {m_process.StandardError}");
             }
             return IsRunning;
         }
@@ -57,9 +58,9 @@ namespace zomboi
         public async Task Stop()
         {
             await m_client.SetActivityAsync(new Game("Stopping", ActivityType.Watching, ActivityProperties.Spectate));
-            await serverProcess.StandardInput.WriteLineAsync("save");
-            await serverProcess.StandardInput.WriteLineAsync("quit");
-            await serverProcess.WaitForExitAsync();
+            await m_process.StandardInput.WriteLineAsync("save");
+            await m_process.StandardInput.WriteLineAsync("quit");
+            await m_process.WaitForExitAsync();
             await m_client.SetStatusAsync(UserStatus.AFK);
             await m_client.SetActivityAsync(null);
         }
@@ -152,8 +153,8 @@ namespace zomboi
         public async Task Create(string password)
         {
             await Start();
-            await serverProcess.StandardInput.WriteLineAsync(password); // Set the password
-            await serverProcess.StandardInput.WriteLineAsync(password); // Confirm the password
+            await m_process.StandardInput.WriteLineAsync(password); // Set the password
+            await m_process.StandardInput.WriteLineAsync(password); // Confirm the password
             await Stop();
         }
 
