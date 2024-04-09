@@ -9,3 +9,5 @@
 .DS_Store
 /zomboi.ini
 /zomboi.sln
+.mono
+.vscode
