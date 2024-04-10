@@ -5,42 +5,25 @@ using Discord.WebSocket;
 
 namespace zomboi
 {
-    public class ChatListener
+    public class ChatListener : LogFileListener
     {
-        private readonly DiscordSocketClient m_client;
         private DiscordWebhookClient? m_webhookClient;
-        private readonly FileSystemWatcher m_watcher;
-        private FileStream? m_fileStream;
-        private StreamReader? m_fileStreamReader;
-        private DateTime m_lastUpdate = DateTime.Now;
         private IMessageChannel? m_channel;
-        public ChatListener(DiscordSocketClient client)
+        private DiscordSocketClient? m_client;
+        public ChatListener() : base("*chat.txt")
         {
-            m_client = client;
-
-            m_watcher = new(Server.LogFolderPath);
-            m_watcher.NotifyFilter =
-                NotifyFilters.FileName |
-                NotifyFilters.LastWrite |
-                NotifyFilters.CreationTime |
-                NotifyFilters.LastAccess |
-                NotifyFilters.Size;
-            m_watcher.Filter = "*chat.txt";
-            m_watcher.EnableRaisingEvents = true;
-            m_watcher.Changed += OnChanged;
-            m_watcher.Created += OnCreated;
-            m_watcher.Error += OnError;
         }
 
-        public void SetChannel(string channelID)
+        public void SetChannel(DiscordSocketClient client, string channelID)
         {
+            m_client = client;
             if (channelID == null)
             {
                 Logger.Error("Got a null channel ID");
                 return;
             }
-            var channel = m_client.GetChannel(ulong.Parse(channelID));
-            m_channel = m_client.GetChannel(ulong.Parse(channelID)) as IMessageChannel;
+            var channel = client.GetChannel(ulong.Parse(channelID));
+            m_channel = channel as IMessageChannel;
             if (m_channel == null)
             {
                 Logger.Error($"Channel ID {channelID} does not appear to be valid");
@@ -67,94 +50,37 @@ namespace zomboi
             }
         }
 
-        private void OnCreated(object sender, FileSystemEventArgs e)
+        override protected async Task Parse(LogLine line)
         {
-            m_fileStream = new FileStream(Path.Combine(Server.LogFolderPath, e.FullPath), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-            m_fileStreamReader = new StreamReader(m_fileStream);
-        }
-
-        private async void OnChanged(object sender, FileSystemEventArgs e)
-        {
-
-            // If we haven't been given a channel then don't do anything
-            if (m_channel == null)
+            if (m_client == null || m_webhookClient == null)
             {
-                Logger.Info("Channel not set for user notifications");
+                Logger.Warn($"Client(s) are null, something gone wrong?");
                 return;
             }
-
-            if (e.Name == null)
+            // We only want to mirror general/global messages
+            if (line.Message.Contains("chat=General"))
             {
-                Logger.Error("Received a file change event without a file name");
-                return;
-            }
+                // the actual message will be in the format of text='<message>' so parse for that
+                var textOpener = "text='";
+                var partial = line.Message.Substring(line.Message.IndexOf(textOpener) + textOpener.Length);
+                var chatMessage = partial.Substring(0,partial.IndexOf("'}"));
 
-            if (m_webhookClient == null)
-            {
-                Logger.Error("Webhook client is null");
-                m_watcher.EnableRaisingEvents = false;
-                return;
-            }
+                // and the author will be in the format author='<author>'
+                var authorOpener = "author='";
+                partial = line.Message.Substring(line.Message.IndexOf(authorOpener) + authorOpener.Length);
+                var author = partial.Substring(0, partial.IndexOf("'"));
 
-            if (m_fileStream == null || m_fileStreamReader == null)
-            {
-                Logger.Error("File stream not opened");
-                return;
-            }
-
-            if(!m_fileStream.Name.Equals(e.FullPath, StringComparison.OrdinalIgnoreCase))
-            {
-                Logger.Warn($"unexpected file chamge: {e.Name}");
-            }
-
-            var line = m_fileStreamReader.ReadLine();
-            while(line != null)
-            {
-                LogLine logLine = new(line);
-                if (logLine.TimeStamp > m_lastUpdate)
+                // Check if there's a discord user with a matching name, and use their picture if so
+                var user = m_client.GetUser(author);
+                if (user != null)
                 {
-                    m_lastUpdate = logLine.TimeStamp;
-
-                    // We only want to mirror general/global messages
-                    if (logLine.Message.Contains("chat=General"))
-                    {
-                        // the actual message will be in the format of text='<message>' so parse for that
-                        var textOpener = "text='";
-                        var partial = logLine.Message.Substring(logLine.Message.IndexOf(textOpener) + textOpener.Length);
-                        var chatMessage = partial.Substring(0,partial.IndexOf("'}"));
-
-                        // and the author will be in the format author='<author>'
-                        var authorOpener = "author='";
-                        partial = logLine.Message.Substring(logLine.Message.IndexOf(authorOpener) + authorOpener.Length);
-                        var author = partial.Substring(0, partial.IndexOf("'"));
-
-                        // Check if there's a discord user with a matching name, and use their picture if so
-                        var user = m_client.GetUser(author);
-                        if (user != null)
-                        {
-                            await m_webhookClient.SendMessageAsync(text: chatMessage, username: user.GlobalName, avatarUrl: user.GetAvatarUrl());
-                        }
-                        else
-                        {
-                            await m_webhookClient.SendMessageAsync(text: chatMessage, username: author, avatarUrl: m_client.CurrentUser.GetAvatarUrl());
-                        }
-
-                    }
+                    await m_webhookClient.SendMessageAsync(text: chatMessage, username: user.GlobalName, avatarUrl: user.GetAvatarUrl());
                 }
-                line = m_fileStreamReader.ReadLine();
-            }
-        }
+                else
+                {
+                    await m_webhookClient.SendMessageAsync(text: chatMessage, username: author, avatarUrl: m_client.CurrentUser.GetAvatarUrl());
+                }
 
-        private void OnError(object sender, ErrorEventArgs e)
-        {
-            var exception = e.GetException();
-            if (exception != null)
-            {
-                Logger.Error(exception.Message);
-            }
-            else
-            {
-                Logger.Error("Unknown file watcher error");
             }
         }
     }

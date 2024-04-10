@@ -2,7 +2,7 @@
 
 namespace zomboi
 {
-    internal class Player
+    public class Player
     {
         public string Name { get; }
         public DateTime LastSeen { get; set; }

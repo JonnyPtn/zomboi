@@ -7,7 +7,7 @@ using Discord.WebSocket;
 
 namespace zomboi
 {
-    internal class Server
+    public class Server
     {
         private static string serverPath = "server";
         private static string StartPath { get 
