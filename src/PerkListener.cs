@@ -1,4 +1,5 @@
 ﻿
+using System.Diagnostics;
 using System.Reflection.Metadata.Ecma335;
 using Discord;
 using Discord.WebSocket;
@@ -17,9 +18,9 @@ namespace zomboi
 
         public void SetChannel(DiscordSocketClient client, string channelID)
         {
-            if (channelID == null)
+            if (channelID == null || channelID == "")
             {
-                Logger.Error("Got a null channel ID");
+                Logger.Error($"Bad channel ID: {channelID}");
                 return;
             }
             var channel = client.GetChannel(ulong.Parse(channelID));
@@ -30,7 +31,7 @@ namespace zomboi
             }
         }
 
-        override protected async Task Parse(LogLine line)
+        override protected async Task<bool> Parse(LogLine line)
         {
             if (m_channel != null)
             {
@@ -38,43 +39,44 @@ namespace zomboi
                 var closeBracket = line.Message.IndexOf("]");
                 var openBracket = line.Message.IndexOf("[");
                 var someNumber = line.Message.Substring(openBracket + 1, closeBracket - 1);
+                Logger.Info($"Perk Some Number:{someNumber}");
 
-                openBracket = line.Message.IndexOf("]", closeBracket);
-                closeBracket = line.Message.IndexOf("[", openBracket);
+                openBracket = line.Message.IndexOf("[", closeBracket);
+                closeBracket = line.Message.IndexOf("]", openBracket);
                 var name = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
+                Logger.Info($"Perk Player Name:{name}");
 
-                openBracket = line.Message.IndexOf("]", closeBracket);
-                closeBracket = line.Message.IndexOf("[", openBracket);
+                openBracket = line.Message.IndexOf("[", closeBracket);
+                closeBracket = line.Message.IndexOf("]", openBracket);
                 var perks = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
+                Logger.Info($"Perks: {perks}");
 
-                var perkPairs = perks.Split(",", StringSplitOptions.TrimEntries);
-                var perkValues = perkPairs.Select(x => 
+                if (perks.Contains("="))
                 {
-                    var split = x.Split("=");
-                    return new Perk(split[0],int.Parse(split[1]));
-                }).ToArray();
+                    // Should be a list of key=value perks?!
+                    var perkPairs = perks.Split(",", StringSplitOptions.TrimEntries);
+                    var perkValues = perkPairs.Select(x => 
+                    {
+                        var split = x.Split("=");
+                        return new Perk(split[0],int.Parse(split[1]));
+                    }).ToArray();
 
-                var player = m_server.Players.Find(x => x.Name == name);
-                if (player != null)
-                {
-                        // Check against the player's perks to see if they've levelled up
-                        foreach(var perk in perkValues)
+                    var player = m_server.GetOrCreatePlayer(name);
+                    
+                    // Check against the player's perks to see if they've levelled up
+                    foreach(var perk in perkValues)
+                    {
+                        var existing = player.Perks.Find(x => x.Name == perk.Name);
+                        if (existing != null && perk.Level > existing.Level)
                         {
-                            var existing = player.Perks.Find(x => x.Name == perk.Name);
-                            if (existing != null && perk.Level > existing.Level)
-                            {
-                                await m_channel.SendMessageAsync($":chart_with_upwards_trend: {player.Name} has achieved level {perk.Level} in {perk.Name}");
-                                existing.Level = perk.Level;
-                            }
+                            await m_channel.SendMessageAsync($":chart_with_upwards_trend: {player.Name} has achieved level {perk.Level} in {perk.Name}");
+                            existing.Level = perk.Level;
                         }
-                }
-                else
-                {
-                    // As we monitor a separate file for player joins, they may not have been added yet,
-                    // So just add them with the perks
-                    m_server.AddPlayer(new Player(name, line.TimeStamp, new(), new List<Perk>(perkValues)));
+                    }
+                    return true;
                 }
             }
+            return false;
         }
     }
 }

@@ -2,6 +2,7 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Specialized;
 using System.Numerics;
 using System.Security.Cryptography.X509Certificates;
 
@@ -32,7 +33,7 @@ namespace zomboi
             }
         }
 
-        override protected async Task Parse(LogLine line)
+        override protected async Task<bool> Parse(LogLine line)
         {
             string message = "";
             if (line.Message.Contains("fully connected"))
@@ -49,7 +50,9 @@ namespace zomboi
                 var positions = positionString.Split(',');
                 var position = new Vector2(int.Parse(positions[0]), int.Parse(positions[1]));
 
-                m_server.AddPlayer(new Player(name, line.TimeStamp, position, new List<Perk>()));
+                var player = m_server.GetOrCreatePlayer(name);
+                player.LastSeen = player.LastSeen > line.TimeStamp ? player.LastSeen : line.TimeStamp;
+                player.Position = position;
                 message = $":wave: {name} has connected";
             }
             else if (line.Message.Contains("disconnected"))
@@ -69,7 +72,9 @@ namespace zomboi
             else if (message != "")
             {
                 await m_channel.SendMessageAsync(message);
+                return true;
             }
+            return false;
         }
     }
 }

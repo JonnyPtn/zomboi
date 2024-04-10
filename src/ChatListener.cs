@@ -50,12 +50,12 @@ namespace zomboi
             }
         }
 
-        override protected async Task Parse(LogLine line)
+        override protected async Task<bool> Parse(LogLine line)
         {
             if (m_client == null || m_webhookClient == null)
             {
                 Logger.Warn($"Client(s) are null, something gone wrong?");
-                return;
+                return false;
             }
             // We only want to mirror general/global messages
             if (line.Message.Contains("chat=General"))
@@ -80,8 +80,9 @@ namespace zomboi
                 {
                     await m_webhookClient.SendMessageAsync(text: chatMessage, username: author, avatarUrl: m_client.CurrentUser.GetAvatarUrl());
                 }
-
+                return true;
             }
+            return false;
         }
     }
 }

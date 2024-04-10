@@ -1,9 +1,11 @@
+using System.Diagnostics;
 using zomboi;
 
 abstract public class LogFileListener
 {
     private readonly FileSystemWatcher m_watcher;
     private StreamReader? m_reader;
+    private StreamWriter? m_writer;
     private DateTime m_last_update;
     public LogFileListener(string filePattern)
     {
@@ -26,7 +28,7 @@ abstract public class LogFileListener
         m_watcher.Created += OnCreated;
         m_watcher.Error += OnError;
     }
-    abstract protected Task Parse(LogLine line);
+    abstract protected Task<bool> Parse(LogLine line);
     async void OnChanged(object sender, FileSystemEventArgs e)
     {
         if (e.Name == null)
@@ -35,9 +37,9 @@ abstract public class LogFileListener
             return;
         }
 
-        if (m_reader == null)
+        if (m_reader == null || m_writer == null)
         {
-            Logger.Error($"File changed but reader isn't open: {e.Name}");
+            Logger.Error($"File changed but reader/writer isn't open: {e.Name}");
             return;
         }
 
@@ -49,7 +51,14 @@ abstract public class LogFileListener
             {
                 m_last_update = logLine.TimeStamp;
 
-                await Parse(logLine);
+                if (!await Parse(logLine))
+                {
+                    await m_writer.WriteLineAsync(line);
+                    if (Debugger.IsAttached)
+                    {
+                        await m_writer.FlushAsync();
+                    }
+                }
             }
             line = m_reader.ReadLine();
         }
@@ -58,6 +67,7 @@ abstract public class LogFileListener
     {
         var fileStream = new FileStream(Path.Combine(Server.LogFolderPath, e.FullPath), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
         m_reader = new StreamReader(fileStream);
+        m_writer = new StreamWriter(new FileStream($"logs/{m_watcher.Filter}", FileMode.Create));
     }
     void OnError(object sender, ErrorEventArgs e)
     {

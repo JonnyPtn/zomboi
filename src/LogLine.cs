@@ -1,6 +1,7 @@
 ﻿
 
 using System.Globalization;
+using zomboi;
 
 namespace zomboi
 {
@@ -27,5 +28,10 @@ namespace zomboi
         }
         public DateTime TimeStamp {  get; }
         public string Message { get; }
+
+        public static implicit operator string(LogLine line)
+        {
+            return $"[{line.TimeStamp}] {line.Message}";
+        }
     }
 }
