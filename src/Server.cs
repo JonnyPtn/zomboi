@@ -31,11 +31,28 @@ namespace zomboi
         public static bool IsInstalled { get { return Directory.Exists(serverPath); } }
         public static bool IsCreated { get { return File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini")); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Logs")); } }
-        public List<Player> players = new List<Player>();
+        private List<Player> m_players = new List<Player>();
+        public List<Player> Players { get { return m_players;}}
+        public int PlayerCount { get { return m_players.Count;}}
         private readonly DiscordSocketClient m_client;
         public Server(DiscordSocketClient client)
         {
             m_client = client;
+        }
+
+        public bool AddPlayer(Player player)
+        {
+            var existing = m_players.Find(x => x.Name == player.Name);
+            if (existing == null)
+            {
+                m_players.Add(player);
+                return true;
+            }
+            else
+            {
+                Logger.Warn($"Adding existing player: {existing.Name}");
+                return false;
+            }
         }
         
         public async Task<bool> Start()

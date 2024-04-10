@@ -49,7 +49,7 @@ namespace zomboi
                 var positions = positionString.Split(',');
                 var position = new Vector2(int.Parse(positions[0]), int.Parse(positions[1]));
 
-                m_server.players.Add(new Player(name, line.TimeStamp, position));
+                m_server.AddPlayer(new Player(name, line.TimeStamp, position, new List<Perk>()));
                 message = $":wave: {name} has connected";
             }
             else if (line.Message.Contains("disconnected"))
@@ -58,7 +58,7 @@ namespace zomboi
                 var firstQuote = line.Message.IndexOf("\"");
                 var lastQuote = line.Message.LastIndexOf("\"");
                 var name = line.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-                m_server.players.RemoveAll(x => x.Name == name);
+                m_server.Players.RemoveAll(x => x.Name == name);
                 message = $":runner: {name} has disconnected";
             }
 

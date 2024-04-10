@@ -16,7 +16,7 @@ namespace zomboi
         public async Task Players()
         {
             var server = m_provider.GetRequiredService<Server>();
-            if (server.players.Count == 0)
+            if (server.PlayerCount == 0)
             {
                 await RespondAsync("No players currently connected", ephemeral: true);
             }
@@ -25,7 +25,7 @@ namespace zomboi
                 var builder = new EmbedBuilder()
                     .WithTitle("Players");
 
-                foreach (var player in server.players)
+                foreach (var player in server.Players)
                 {
                     builder.AddField(player.Name, $"Last seen: {player.LastSeen.ToShortDateString()} {player.LastSeen.ToShortTimeString()} at {player.Position.ToString()}");
                 }

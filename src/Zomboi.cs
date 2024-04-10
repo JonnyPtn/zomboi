@@ -47,6 +47,7 @@ namespace zomboi
                 .AddSingleton<Playerlistener>()
                 .AddSingleton<Server>()
                 .AddSingleton<ChatListener>()
+                .AddSingleton<PerkListener>()
                 .BuildServiceProvider();
         }
         static void Main(string[] args)
@@ -89,6 +90,7 @@ namespace zomboi
             client.Ready += () => {
                 m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"]??"");
                 m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(client, m_configuration["bot:chat channel"]??"");
+                m_serviceProvider.GetRequiredService<PerkListener>().SetChannel(client, m_configuration["bot:skill channel"]??"");
                 return Task.CompletedTask;
             };
 
