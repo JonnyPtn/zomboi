@@ -43,7 +43,6 @@ namespace zomboi
                 Logger.Warn("Player perks are empty");
             }
             var skillString = string.Join("\n", player.Perks.Select(x => x.Name + " : " + x.Level));
-            Logger.Info("skillString");
             var embed = new EmbedBuilder()
                 .WithTitle(player.Name)
                 .WithDescription(skillString);
