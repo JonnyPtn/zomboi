@@ -68,7 +68,6 @@ abstract public class LogFileListener
 
         if (m_reader == null || m_writer == null)
         {
-            Logger.Warn($"File changed but reader/writer isn't open: {e.Name}");
             OnCreated(sender, e);
         }
 
