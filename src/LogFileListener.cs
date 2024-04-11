@@ -6,7 +6,7 @@ abstract public class LogFileListener
     private readonly FileSystemWatcher m_watcher;
     private StreamReader? m_reader;
     private StreamWriter? m_writer;
-    private DateTime m_last_update;
+    private DateTime m_last_update = DateTime.UnixEpoch;
     public LogFileListener(string filePattern)
     {
         Directory.CreateDirectory(Server.LogFolderPath);
@@ -29,6 +29,35 @@ abstract public class LogFileListener
         m_watcher.Error += OnError;
     }
     abstract protected Task<bool> Parse(LogLine line);
+
+    private void OpenFile(string path)
+    {
+        var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+        {
+            Position = 0
+        };
+        m_reader = new StreamReader(fileStream);
+        m_writer = new StreamWriter(new FileStream($"logs/{m_watcher.Filter}", FileMode.Create));
+    }
+
+    private async Task Update()
+    {
+        string? line;
+        while((line = m_reader?.ReadLine()) != null)
+        {
+            LogLine logLine = new(line);
+            if (logLine.TimeStamp >= m_last_update)
+            {
+                m_last_update = logLine.TimeStamp;
+
+                if (!await Parse(logLine))
+                {
+                    m_writer?.WriteLine(line);
+                    m_writer?.Flush();
+                }
+            }
+        }
+    }
     async void OnChanged(object sender, FileSystemEventArgs e)
     {
         if (e.Name == null)
@@ -39,35 +68,15 @@ abstract public class LogFileListener
 
         if (m_reader == null || m_writer == null)
         {
-            Logger.Error($"File changed but reader/writer isn't open: {e.Name}");
-            return;
+            Logger.Warn($"File changed but reader/writer isn't open: {e.Name}");
+            OnCreated(sender, e);
         }
 
-        var line = m_reader.ReadLine();
-        while(line != null)
-        {
-            LogLine logLine = new(line);
-            if (logLine.TimeStamp > m_last_update)
-            {
-                m_last_update = logLine.TimeStamp;
-
-                if (!await Parse(logLine))
-                {
-                    await m_writer.WriteLineAsync(line);
-                    if (Debugger.IsAttached)
-                    {
-                        await m_writer.FlushAsync();
-                    }
-                }
-            }
-            line = m_reader.ReadLine();
-        }
+        await Update();
     }
     void OnCreated(object sender, FileSystemEventArgs e)
     {
-        var fileStream = new FileStream(Path.Combine(Server.LogFolderPath, e.FullPath), FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-        m_reader = new StreamReader(fileStream);
-        m_writer = new StreamWriter(new FileStream($"logs/{m_watcher.Filter}", FileMode.Create));
+        OpenFile(e.FullPath);
     }
     void OnError(object sender, ErrorEventArgs e)
     {

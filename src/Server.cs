@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿
+using System.Diagnostics;
 using System.Formats.Tar;
 using System.IO.Compression;
 using System.Numerics;
@@ -10,8 +11,8 @@ namespace zomboi
 {
     public class Server
     {
-        private static string serverPath = "server";
-        private static string StartPath { get 
+         private static string serverPath = "server";
+        public static string StartPath { get 
         {
             if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -26,7 +27,7 @@ namespace zomboi
                 return $"{serverPath}/start-server.sh";
             }
         }}
-        private readonly Process m_process = new();
+        private Process m_process = new();
 
         public bool IsRunning { get { return m_process.StartInfo.FileName.Length > 0 && !m_process.HasExited; } }
         public static bool IsInstalled { get { return Directory.Exists(serverPath); } }
@@ -36,6 +37,7 @@ namespace zomboi
         public List<Player> Players { get { return m_players;}}
         public int PlayerCount { get { return m_players.Count;}}
         private readonly DiscordSocketClient m_client;
+
         public Server(DiscordSocketClient client)
         {
             m_client = client;
@@ -48,42 +50,59 @@ namespace zomboi
             var existing = m_players.Find(x => x.Name == playerName);
             if (existing == null)
             {
-                m_players.Add(new Player(playerName, DateTime.Now, new Vector2(), new List<Perk>()));
+                Logger.Info($"Adding Player {playerName}");
+                m_players.Add(new Player(playerName, new Vector2(), new List<Perk>()));
             }
             return existing??m_players.Find(x => x.Name == playerName)??m_players.Last();
         }
         
         public async Task<bool> Start()
         {
-            await m_client.SetActivityAsync(new Game("Starting", ActivityType.Listening, ActivityProperties.Embedded));
-            m_process.StartInfo.FileName = StartPath;
-            m_process.StartInfo.RedirectStandardInput = true;
-            m_process.StartInfo.RedirectStandardOutput = true;
-            m_process.StartInfo.RedirectStandardError = true;
-            m_process.OutputDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
-            m_process.ErrorDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
-            if (m_process.Start())
+            // First check if the process is already running, and attach if so
+            var existing = Process.GetProcessesByName("ProjectZomboid64");
+            if (existing.Count() > 1)
             {
-                m_process.BeginErrorReadLine();
-                m_process.BeginOutputReadLine();
-                await m_client.SetActivityAsync(new Game("Project Zomboid", ActivityType.Playing, ActivityProperties.None));
-                await m_client.SetStatusAsync(UserStatus.Online);
+                var error = $"Found {existing.Count()} existing server processes";
+                Logger.Error(error);
+                return true;
+            }
+            else if (existing.Count() == 1)
+            {
+                m_process = existing[0];
             }
             else
             {
-                Logger.Error($"Failed to start server {m_process.StandardError}");
+                m_process.StartInfo.FileName = StartPath;
+                m_process.StartInfo.RedirectStandardInput = true;
+                m_process.StartInfo.RedirectStandardOutput = true;
+                m_process.StartInfo.RedirectStandardError = true;
+                m_process.OutputDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
+                m_process.ErrorDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
+                if (m_process.Start())
+                {
+                    m_process.BeginErrorReadLine();
+                    m_process.BeginOutputReadLine();
+                }
+                else
+                {
+                    var error = $"Failed to start server {m_process.StandardError}";
+                    Logger.Error(error);
+                    return false;
+                }
+
             }
-            return IsRunning;
+            await m_client.SetGameAsync("Project Zomboid");
+            await m_client.SetStatusAsync(UserStatus.Online);
+            return true;
         }
 
         public async Task Stop()
         {
-            await m_client.SetActivityAsync(new Game("Stopping", ActivityType.Watching, ActivityProperties.Spectate));
+            await m_client.SetGameAsync(null);
+            await m_client.SetStatusAsync(UserStatus.DoNotDisturb);
             await m_process.StandardInput.WriteLineAsync("save");
             await m_process.StandardInput.WriteLineAsync("quit");
             await m_process.WaitForExitAsync();
-            await m_client.SetStatusAsync(UserStatus.AFK);
-            await m_client.SetActivityAsync(null);
         }
 
         private async Task DownloadSteamCMD()
@@ -139,38 +158,6 @@ namespace zomboi
                 }
             }
         }
-
-        public async Task Install()
-        {
-            await DownloadSteamCMD();
-
-            await m_client.SetActivityAsync(new Game("updating game", ActivityType.Streaming, ActivityProperties.Sync));
-            await m_client.SetStatusAsync(UserStatus.DoNotDisturb);
-
-            Process process = new();
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-            {
-                process.StartInfo.FileName = "steamcmd/steamcmd.sh";
-            }
-            else
-            {
-                process.StartInfo.FileName = "steamcmd/steamcmd";
-            }
-            process.StartInfo.Arguments = "+runscript ../update_server.txt";
-            process.StartInfo.WorkingDirectory = Environment.CurrentDirectory;
-            process.Start();
-            await process.WaitForExitAsync();
-
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-            {
-                // We don't want the batch file to wait for input, so remove any PAUSE
-                var pause = "PAUSE";
-                var file = File.ReadAllText(StartPath);
-                file = file.Replace(pause, "");
-                File.WriteAllText(StartPath, file);
-            }
-        }
-
         public async Task Create(string password)
         {
             await Start();
@@ -178,6 +165,5 @@ namespace zomboi
             await m_process.StandardInput.WriteLineAsync(password); // Confirm the password
             await Stop();
         }
-
     }
 }

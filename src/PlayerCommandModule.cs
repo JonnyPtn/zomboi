@@ -38,8 +38,12 @@ namespace zomboi
         public async Task Skills([Summary("Name", "Name of the player to show skills for")]string playerName)
         {
             var player = m_provider.GetRequiredService<Server>().GetOrCreatePlayer(playerName);
-
-            var skillString = string.Join("\n", player.Perks.Select(x => x.Name + ":" + x.Level));
+            if (player.Perks.Count == 0)
+            {
+                Logger.Warn("Player perks are empty");
+            }
+            var skillString = string.Join("\n", player.Perks.Select(x => x.Name + " : " + x.Level));
+            Logger.Info("skillString");
             var embed = new EmbedBuilder()
                 .WithTitle(player.Name)
                 .WithDescription(skillString);

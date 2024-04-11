@@ -42,10 +42,10 @@ namespace zomboi
                 .AddSingleton(m_configuration)
                 .AddSingleton(m_socketConfig)
                 .AddSingleton<DiscordSocketClient>()
+                .AddSingleton<Server>()
                 .AddSingleton(x => new InteractionService(x.GetRequiredService<DiscordSocketClient>()))
                 .AddSingleton<InteractionHandler>()
                 .AddSingleton<Playerlistener>()
-                .AddSingleton<Server>()
                 .AddSingleton<ChatListener>()
                 .AddSingleton<PerkListener>()
                 .BuildServiceProvider();
@@ -79,15 +79,10 @@ namespace zomboi
                 Logger.Error("Token is only whitespace");
                 return;
             }
-            
-            // If the server already exists just automatically start it
-            if (Server.IsInstalled && Server.IsCreated)
-            {
-                await m_serviceProvider.GetRequiredService<Server>().Start();
-            }
 
             // Once we're logged in, set up our channels
             client.Ready += () => {
+
                 m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"]??"");
                 m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(client, m_configuration["bot:chat channel"]??"");
                 m_serviceProvider.GetRequiredService<PerkListener>().SetChannel(client, m_configuration["bot:skill channel"]??"");

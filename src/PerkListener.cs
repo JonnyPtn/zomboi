@@ -3,17 +3,18 @@ using System.Diagnostics;
 using System.Reflection.Metadata.Ecma335;
 using Discord;
 using Discord.WebSocket;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace zomboi
 {
     public class PerkListener : LogFileListener
     {
-        private readonly Server m_server;
+        private readonly IServiceProvider m_provider;
         private IMessageChannel? m_channel;
 
-        public PerkListener(Server server) : base("*PerkLog.txt")
+        public PerkListener(IServiceProvider provider) : base("*PerkLog.txt")
         {
-            m_server = server;
+            m_provider = provider;
         }
 
         public void SetChannel(DiscordSocketClient client, string channelID)
@@ -39,17 +40,18 @@ namespace zomboi
                 var closeBracket = line.Message.IndexOf("]");
                 var openBracket = line.Message.IndexOf("[");
                 var someNumber = line.Message.Substring(openBracket + 1, closeBracket - 1);
-                Logger.Info($"Perk Some Number:{someNumber}");
 
                 openBracket = line.Message.IndexOf("[", closeBracket);
                 closeBracket = line.Message.IndexOf("]", openBracket);
                 var name = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
-                Logger.Info($"Perk Player Name:{name}");
+
+                openBracket = line.Message.IndexOf("[", closeBracket);
+                closeBracket = line.Message.IndexOf("]", openBracket);
+                var position = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
 
                 openBracket = line.Message.IndexOf("[", closeBracket);
                 closeBracket = line.Message.IndexOf("]", openBracket);
                 var perks = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
-                Logger.Info($"Perks: {perks}");
 
                 if (perks.Contains("="))
                 {
@@ -61,13 +63,17 @@ namespace zomboi
                         return new Perk(split[0],int.Parse(split[1]));
                     }).ToArray();
 
-                    var player = m_server.GetOrCreatePlayer(name);
+                    var player = m_provider.GetRequiredService<Server>().GetOrCreatePlayer(name);
                     
                     // Check against the player's perks to see if they've levelled up
                     foreach(var perk in perkValues)
                     {
                         var existing = player.Perks.Find(x => x.Name == perk.Name);
-                        if (existing != null && perk.Level > existing.Level)
+                        if (existing == null)
+                        {
+                            player.Perks.Add(perk);
+                        }
+                        else if (perk.Level > existing.Level)
                         {
                             await m_channel.SendMessageAsync($":chart_with_upwards_trend: {player.Name} has achieved level {perk.Level} in {perk.Name}");
                             existing.Level = perk.Level;

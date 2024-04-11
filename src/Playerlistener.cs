@@ -11,8 +11,7 @@ namespace zomboi
     public class Playerlistener : LogFileListener
     {
         private IMessageChannel? m_channel;
-        private readonly Server m_server;
-
+        private Server m_server;
         public Playerlistener(Server server) : base("*user.txt")
         {
             m_server = server;
@@ -51,9 +50,13 @@ namespace zomboi
                 var position = new Vector2(int.Parse(positions[0]), int.Parse(positions[1]));
 
                 var player = m_server.GetOrCreatePlayer(name);
-                player.LastSeen = player.LastSeen > line.TimeStamp ? player.LastSeen : line.TimeStamp;
+                player.Online = true;
                 player.Position = position;
-                message = $":wave: {name} has connected";
+                if (player.LastSeen < line.TimeStamp)
+                {
+                    player.LastSeen = line.TimeStamp;
+                    message = $":wave: {name} has connected";
+                }
             }
             else if (line.Message.Contains("disconnected"))
             {
@@ -61,8 +64,13 @@ namespace zomboi
                 var firstQuote = line.Message.IndexOf("\"");
                 var lastQuote = line.Message.LastIndexOf("\"");
                 var name = line.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-                m_server.Players.RemoveAll(x => x.Name == name);
-                message = $":runner: {name} has disconnected";
+                var player = m_server.GetOrCreatePlayer(name);
+                player.Online = false;
+                if (player.LastSeen < line.TimeStamp)
+                {
+                    player.LastSeen = line.TimeStamp;
+                    message = $":runner: {name} has disconnected";
+                }
             }
 
             if (m_channel == null)
