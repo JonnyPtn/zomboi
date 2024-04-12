@@ -62,7 +62,7 @@ namespace zomboi
             {
                 m_lastChatTime = line.TimeStamp;
                 // We only want to mirror general/global messages
-                if (line.Message.Contains("chat=General"))
+                if (line.Message.Contains("Got message") && line.Message.Contains("chat=General"))
                 {
                     // the actual message will be in the format of text='<message>' so parse for that
                     var textOpener = "text='";
