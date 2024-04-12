@@ -86,6 +86,12 @@ namespace zomboi
                 m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"]??"");
                 m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(client, m_configuration["bot:chat channel"]??"");
                 m_serviceProvider.GetRequiredService<PerkListener>().SetChannel(client, m_configuration["bot:skill channel"]??"");
+
+                var server = m_serviceProvider.GetRequiredService<Server>();
+                if (!server.Attach())
+                {
+                    return server.Start();
+                }
                 return Task.CompletedTask;
             };
 
