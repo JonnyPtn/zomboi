@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.Formats.Tar;
 using System.IO.Compression;
+using System.Net;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Discord;
@@ -144,8 +145,27 @@ namespace zomboi
         {
             var embed = new EmbedBuilder()
                 .WithTitle("Server status")
-                .AddField("Running", m_server.IsRunning)
-                .AddField("Player Count", m_server.PlayerCount);
+                .AddField("Running", m_server.IsRunning);
+
+            if (m_server.IsRunning)
+            {
+                var ipString = "";
+                try
+                {
+                    ipString = (await new HttpClient().GetStringAsync("http://icanhazip.com/")).Replace("\\r\\n", "").Replace("\\n", "").Trim();
+                }
+                catch (Exception e)
+                {
+                    Logger.Error(e.Message);
+                }
+                if (!IPAddress.TryParse(ipString, out IPAddress? ipAddress))
+                {
+                    Logger.Error("Unable to get external IP address");
+                }
+                embed.AddField("IP Address", ipAddress == null ? "Unknown" : ipAddress.ToString())
+                    .AddField("Port", "16261")
+                    .AddField("Player Count", m_server.PlayerCount);
+            }
             await RespondAsync(embed: embed.Build(), ephemeral: true);
         }
     }
