@@ -48,7 +48,7 @@ namespace zomboi
         public delegate void PlayerJoined(Player player);
         public event PlayerJoined OnPlayerJoined;
 
-        private readonly StreamWriter m_logStream = new StreamWriter(new FileStream("server.log", FileMode.Create));
+        private readonly StreamWriter m_logStream = new StreamWriter(new FileStream("server.log", FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
 
         public Player GetOrCreatePlayer(string playerName, DateTime seenTime)
         {
@@ -97,7 +97,11 @@ namespace zomboi
         
         public async Task<bool> Start()
         {
-            await Stop();
+            if (IsRunning)
+            {
+                Logger.Warn("Trying to start server that's already running");
+                return false;
+            }
             var existing = Process.GetProcessesByName("ProjectZomboid64");
             m_process.StartInfo.FileName = StartPath;
             m_process.StartInfo.RedirectStandardInput = true;
@@ -131,12 +135,16 @@ namespace zomboi
             {
                 await m_process.StandardInput.WriteLineAsync("save");
                 await m_process.StandardInput.WriteLineAsync("quit");
+                m_process.CancelErrorRead();
+                m_process.CancelOutputRead();
+                m_logStream.Flush();
                 m_process.WaitForExit(TimeSpan.FromSeconds(30));
             }
             if (IsRunning)
             {
                 Logger.Info("Unable to stop server cleanly, will be killed");
                 m_process.Kill();
+
             }
             IsChildProcess = false;
         }
