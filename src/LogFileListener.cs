@@ -37,7 +37,7 @@ abstract public class LogFileListener
             Position = 0
         };
         m_reader = new StreamReader(fileStream);
-        m_writer = new StreamWriter(new FileStream($"logs/{m_watcher.Filter}", FileMode.Create));
+        m_writer = new StreamWriter(new FileStream(path, FileMode.Create));
     }
 
     private async Task Update()
