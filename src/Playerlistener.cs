@@ -21,7 +21,7 @@ namespace zomboi
                 Logger.Warn("Player notification channel not set");
                 return;
             }
-            await m_channel.SendMessageAsync($":wave: {player.Name} has connected");
+            await m_channel.SendMessageAsync($":wave: {player.Name} has joined");
         }
 
         public void SetChannel(DiscordSocketClient client, string channelID)
@@ -46,7 +46,6 @@ namespace zomboi
                 Logger.Warn("Player notification channel not set");
                 return false;
             }
-            string message = "";
             if (line.Message.Contains("fully connected"))
             {
                 // The only part of this line in quotes should be the player name, so find that
@@ -81,7 +80,7 @@ namespace zomboi
                 if (player.LastSeen < line.TimeStamp)
                 {
                     player.LastSeen = line.TimeStamp;
-                    await m_channel.SendMessageAsync(message);
+                    await m_channel.SendMessageAsync($":person_running: {player.Name} has left");
                     return true;
                 }
             }
