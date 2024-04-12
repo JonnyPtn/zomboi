@@ -27,14 +27,15 @@ namespace zomboi
                 return $"{serverPath}/start-server.sh";
             }
         }}
-        private Process m_process = new();
+        private Process? m_process;
 
-        public bool IsRunning { get { return (IsChildProcess && m_process.StartInfo.FileName.Length > 0) && !m_process.HasExited; } }
+        public bool IsRunning { get { return m_process != null && !m_process.HasExited; } }
+        public TimeSpan UpTime { get { return DateTime.Now - m_startTime;} }
         public bool IsChildProcess { get; private set; }
         public static bool IsInstalled { get { return Directory.Exists(serverPath); } }
         public static bool IsCreated { get { return File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini")); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Logs")); } }
-        private List<Player> m_players = new List<Player>();
+        private List<Player> m_players = new();
         public List<Player> Players { get { return m_players;}}
         public int PlayerCount { get { return m_players.Count;}}
         private readonly DiscordSocketClient m_client;
@@ -46,7 +47,7 @@ namespace zomboi
         }
 
         public delegate void PlayerJoined(Player player);
-        public event PlayerJoined OnPlayerJoined;
+        public event PlayerJoined? OnPlayerJoined;
 
         private readonly StreamWriter m_logStream = new StreamWriter(new FileStream("server.log", FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
 
@@ -60,10 +61,13 @@ namespace zomboi
                 m_players.Add(player);
             }
 
+            // if it was before the server started then don't send an event
             if (seenTime > m_startTime && !player.Online)
             {
-                player.Online = true;
-                OnPlayerJoined.Invoke(m_players.Last());
+                if (OnPlayerJoined != null)
+                {
+                    OnPlayerJoined.Invoke(m_players.Last());
+                }
             }
 
             return player;
@@ -77,6 +81,7 @@ namespace zomboi
             // So for now just don't try to attach on windows
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
+                Logger.Info("Windows attach not implemented");
                 return false;
             }
             var existing = Process.GetProcessesByName("ProjectZomboid64");
@@ -90,6 +95,7 @@ namespace zomboi
                 m_process = existing[0];
                 IsChildProcess = false;
                 m_startTime = DateTime.Now;
+                Logger.Info("Attached to server process");
                 return true;
             }
             return false;
@@ -102,7 +108,8 @@ namespace zomboi
                 Logger.Warn("Trying to start server that's already running");
                 return false;
             }
-            var existing = Process.GetProcessesByName("ProjectZomboid64");
+
+            m_process = new();
             m_process.StartInfo.FileName = StartPath;
             m_process.StartInfo.RedirectStandardInput = true;
             m_process.StartInfo.RedirectStandardOutput = true;

@@ -144,11 +144,11 @@ namespace zomboi
         public async Task Status()
         {
             var embed = new EmbedBuilder()
-                .WithTitle("Server status")
-                .AddField("Running", m_server.IsRunning);
+                .WithTitle("Server status");
 
             if (m_server.IsRunning)
             {
+                embed.Color = Color.Green;
                 var ipString = "";
                 try
                 {
@@ -158,13 +158,23 @@ namespace zomboi
                 {
                     Logger.Error(e.Message);
                 }
+
                 if (!IPAddress.TryParse(ipString, out IPAddress? ipAddress))
                 {
                     Logger.Error("Unable to get external IP address");
                 }
-                embed.AddField("IP Address", ipAddress == null ? "Unknown" : ipAddress.ToString())
+
+                var uptimeString = $"{m_server.UpTime.Hours}h {m_server.UpTime.Minutes}m {m_server.UpTime.Seconds}s";
+
+                embed.AddField("Up time", uptimeString )
+                    .AddField("IP Address", ipAddress == null ? "Unknown" : ipAddress.ToString())
                     .AddField("Port", "16261")
                     .AddField("Player Count", m_server.PlayerCount);
+            }
+            else
+            {
+                embed.Color = Color.Red;
+                embed.Description = "Server offline";
             }
             await RespondAsync(embed: embed.Build(), ephemeral: true);
         }
