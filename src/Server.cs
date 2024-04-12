@@ -97,6 +97,7 @@ namespace zomboi
         
         public async Task<bool> Start()
         {
+            await Stop();
             var existing = Process.GetProcessesByName("ProjectZomboid64");
             m_process.StartInfo.FileName = StartPath;
             m_process.StartInfo.RedirectStandardInput = true;
