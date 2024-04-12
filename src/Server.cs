@@ -60,43 +60,52 @@ namespace zomboi
             }
             return existing??m_players.Find(x => x.Name == playerName)??m_players.Last();
         }
-        
-        public async Task<bool> Start()
+
+        public bool Attach()
         {
-            // First check if the process is already running, and attach if so
+            // On windows I'm not yet sure what process name will find the server
+            // As "ProjectZomboid64" is the actual game client so causes issues
+            // when debugging with a local server which I currently only do on windows
+            // So for now just don't try to attach on windows
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return false;
+            }
             var existing = Process.GetProcessesByName("ProjectZomboid64");
             if (existing.Count() > 1)
             {
                 var error = $"Found {existing.Count()} existing server processes";
                 Logger.Error(error);
-                return true;
             }
             else if (existing.Count() == 1)
             {
                 m_process = existing[0];
                 IsChildProcess = false;
+                return true;
+            }
+            return false;
+        }
+        
+        public async Task<bool> Start()
+        {
+            var existing = Process.GetProcessesByName("ProjectZomboid64");
+            m_process.StartInfo.FileName = StartPath;
+            m_process.StartInfo.RedirectStandardInput = true;
+            m_process.StartInfo.RedirectStandardOutput = true;
+            m_process.StartInfo.RedirectStandardError = true;
+            m_process.OutputDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
+            m_process.ErrorDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
+            if (m_process.Start())
+            {
+                m_process.BeginErrorReadLine();
+                m_process.BeginOutputReadLine();
+                IsChildProcess = true;
             }
             else
             {
-                m_process.StartInfo.FileName = StartPath;
-                m_process.StartInfo.RedirectStandardInput = true;
-                m_process.StartInfo.RedirectStandardOutput = true;
-                m_process.StartInfo.RedirectStandardError = true;
-                m_process.OutputDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
-                m_process.ErrorDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
-                if (m_process.Start())
-                {
-                    m_process.BeginErrorReadLine();
-                    m_process.BeginOutputReadLine();
-                    IsChildProcess = true;
-                }
-                else
-                {
-                    var error = $"Failed to start server {m_process.StandardError}";
-                    Logger.Error(error);
-                    return false;
-                }
-
+                var error = $"Failed to start server {m_process.StandardError}";
+                Logger.Error(error);
+                return false;
             }
             await m_client.SetGameAsync("Project Zomboid");
             await m_client.SetStatusAsync(UserStatus.Online);
