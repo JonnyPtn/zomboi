@@ -12,3 +12,4 @@
 .mono
 .vscode
 /logs
+/server.log

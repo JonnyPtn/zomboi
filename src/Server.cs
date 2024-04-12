@@ -43,7 +43,7 @@ namespace zomboi
             m_client = client;
         }
 
-        private readonly StreamWriter m_logStream = new StreamWriter(new FileStream("logs/server.log", FileMode.Create));
+        private readonly StreamWriter m_logStream = new StreamWriter(new FileStream("server.log", FileMode.Create));
 
         public Player GetOrCreatePlayer(string playerName)
         {
