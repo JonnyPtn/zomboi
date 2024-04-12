@@ -22,14 +22,14 @@ namespace zomboi
         [SlashCommand("start", "Start the server")]
         public async Task Start()
         {
-            await RespondAsync("Starting server, please wait");
+            await RespondAsync("Starting server, please wait", ephemeral: true);
             if (await m_server.Start())
             {
-                await FollowupAsync("Server started");
+                await FollowupAsync("Server started", ephemeral: true);
             }
             else
             {
-                await FollowupAsync("Server start failed");
+                await FollowupAsync("Server start failed", ephemeral: true);
             }
         }
 
@@ -37,9 +37,9 @@ namespace zomboi
         [SlashCommand("stop", "Stop the server")]
         public async Task Stop()
         {
-            await RespondAsync("Stopping server, please wait...");
+            await RespondAsync("Stopping server, please wait...", ephemeral: true);
             await m_server.Stop();
-            await FollowupAsync("Server Stopped");
+            await FollowupAsync("Server Stopped", ephemeral: true);
         }
 
         private async Task DownloadSteamCMD()
@@ -98,7 +98,7 @@ namespace zomboi
         [SlashCommand("install", "Install (or update the server from steam")]
         public async Task Install()
         {
-            await RespondAsync("Installing server");
+            await RespondAsync("Installing server", ephemeral: true);
             await DownloadSteamCMD();
 
             Process process = new();
@@ -114,7 +114,7 @@ namespace zomboi
             process.StartInfo.WorkingDirectory = Environment.CurrentDirectory;
             process.Start();
             await process.WaitForExitAsync();
-            await FollowupAsync("Server installed");
+            await FollowupAsync("Server installed", ephemeral: true);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
@@ -130,9 +130,9 @@ namespace zomboi
         [SlashCommand("create", "Create the server")]        
         public async Task Create(string password)
         {
-            await RespondAsync("Creating server, please wait...");
+            await RespondAsync("Creating server, please wait...", ephemeral: true);
             await m_server.Create(password);
-            await FollowupAsync("Server created");
+            await FollowupAsync("Server created", ephemeral: true);
         }
 
         [SlashCommand("status", "Status of the server")]
@@ -142,7 +142,7 @@ namespace zomboi
                 .WithTitle("Server status")
                 .AddField("Running", m_server.IsRunning)
                 .AddField("Player Count", m_server.PlayerCount);
-            await RespondAsync(embed: embed.Build());
+            await RespondAsync(embed: embed.Build(), ephemeral: true);
         }
     }
 }
