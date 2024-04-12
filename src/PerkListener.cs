@@ -63,7 +63,7 @@ namespace zomboi
                         return new Perk(split[0],int.Parse(split[1]));
                     }).ToArray();
 
-                    var player = m_provider.GetRequiredService<Server>().GetOrCreatePlayer(name);
+                    var player = m_provider.GetRequiredService<Server>().GetOrCreatePlayer(name, line.TimeStamp);
                     
                     // Check against the player's perks to see if they've levelled up
                     foreach(var perk in perkValues)

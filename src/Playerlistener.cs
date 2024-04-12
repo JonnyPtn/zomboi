@@ -11,7 +11,7 @@ namespace zomboi
         public Playerlistener(Server server) : base("*user.txt")
         {
             m_server = server;
-            m_server.OnPlayerAdded += OnPlayerAdded;
+            m_server.OnPlayerJoined += OnPlayerAdded;
         }
 
         public async void OnPlayerAdded(Player player)
@@ -60,7 +60,7 @@ namespace zomboi
                 var positions = positionString.Split(',');
                 var position = new Vector2(int.Parse(positions[0]), int.Parse(positions[1]));
 
-                var player = m_server.GetOrCreatePlayer(name);
+                var player = m_server.GetOrCreatePlayer(name, line.TimeStamp);
                 player.Online = true;
                 player.Position = position;
                 if (player.LastSeen < line.TimeStamp)
@@ -75,7 +75,7 @@ namespace zomboi
                 var firstQuote = line.Message.IndexOf("\"");
                 var lastQuote = line.Message.LastIndexOf("\"");
                 var name = line.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-                var player = m_server.GetOrCreatePlayer(name);
+                var player = m_server.GetOrCreatePlayer(name, line.TimeStamp);
                 player.Online = false;
                 if (player.LastSeen < line.TimeStamp)
                 {

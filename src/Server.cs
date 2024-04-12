@@ -38,27 +38,35 @@ namespace zomboi
         public List<Player> Players { get { return m_players;}}
         public int PlayerCount { get { return m_players.Count;}}
         private readonly DiscordSocketClient m_client;
+        private DateTime m_startTime = DateTime.Now;
 
         public Server(DiscordSocketClient client)
         {
             m_client = client;
         }
 
-        public delegate void PlayerAdded(Player player);
-        public event PlayerAdded OnPlayerAdded;
+        public delegate void PlayerJoined(Player player);
+        public event PlayerJoined OnPlayerJoined;
 
         private readonly StreamWriter m_logStream = new StreamWriter(new FileStream("server.log", FileMode.Create));
 
-        public Player GetOrCreatePlayer(string playerName)
+        public Player GetOrCreatePlayer(string playerName, DateTime seenTime)
         {
-            var existing = m_players.Find(x => x.Name == playerName);
-            if (existing == null)
+            var player = m_players.Find(x => x.Name == playerName);
+            if (player == null)
             {
                 Logger.Info($"Adding Player {playerName}");
-                m_players.Add(new Player(playerName, new Vector2(), new List<Perk>()));
-                OnPlayerAdded.Invoke(m_players.Last());
+                player = new Player(playerName, seenTime, new Vector2(), new List<Perk>());
+                m_players.Add(player);
             }
-            return existing??m_players.Find(x => x.Name == playerName)??m_players.Last();
+
+            if (seenTime > m_startTime && !player.Online)
+            {
+                player.Online = true;
+                OnPlayerJoined.Invoke(m_players.Last());
+            }
+
+            return player;
         }
 
         public bool Attach()
@@ -81,6 +89,7 @@ namespace zomboi
             {
                 m_process = existing[0];
                 IsChildProcess = false;
+                m_startTime = DateTime.Now;
                 return true;
             }
             return false;
@@ -100,6 +109,7 @@ namespace zomboi
                 m_process.BeginErrorReadLine();
                 m_process.BeginOutputReadLine();
                 IsChildProcess = true;
+                m_startTime = DateTime.Now;
             }
             else
             {
