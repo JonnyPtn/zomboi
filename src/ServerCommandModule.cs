@@ -10,7 +10,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace zomboi
 {
-    [DefaultMemberPermissions(GuildPermission.Administrator)]
     [Group("server", "Server options")]
     public class ServerCommandModule : InteractionModuleBase<SocketInteractionContext>
     {
@@ -136,5 +135,14 @@ namespace zomboi
             await FollowupAsync("Server created");
         }
 
+        [SlashCommand("status", "Status of the server")]
+        public async Task Status()
+        {
+            var embed = new EmbedBuilder()
+                .WithTitle("Server status")
+                .AddField("Running", m_server.IsRunning)
+                .AddField("Player Count", m_server.PlayerCount);
+            await RespondAsync(embed: embed.Build());
+        }
     }
 }
