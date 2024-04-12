@@ -127,7 +127,7 @@ namespace zomboi
         {
             await m_client.SetGameAsync(null);
             await m_client.SetStatusAsync(UserStatus.DoNotDisturb);
-            if (IsChildProcess)
+            if (IsChildProcess && IsRunning)
             {
                 await m_process.StandardInput.WriteLineAsync("save");
                 await m_process.StandardInput.WriteLineAsync("quit");
