@@ -5,7 +5,6 @@ abstract public class LogFileListener
 {
     private readonly FileSystemWatcher m_watcher;
     private StreamReader? m_reader;
-    private StreamWriter? m_writer;
     private DateTime m_last_update = DateTime.UnixEpoch;
     public LogFileListener(string filePattern)
     {
@@ -30,16 +29,6 @@ abstract public class LogFileListener
     }
     abstract protected Task<bool> Parse(LogLine line);
 
-    private void OpenFile(string path)
-    {
-        var fileStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
-        {
-            Position = 0
-        };
-        m_reader = new StreamReader(fileStream);
-        m_writer = new StreamWriter(new FileStream(path, FileMode.Create));
-    }
-
     private async Task Update()
     {
         string? line;
@@ -52,8 +41,7 @@ abstract public class LogFileListener
 
                 if (!await Parse(logLine))
                 {
-                    m_writer?.WriteLine(line);
-                    m_writer?.Flush();
+                    Logger.Info($"Unhandled Log: {logLine.Message}");
                 }
             }
         }
@@ -66,7 +54,7 @@ abstract public class LogFileListener
             return;
         }
 
-        if (m_reader == null || m_writer == null)
+        if (m_reader == null)
         {
             OnCreated(sender, e);
         }
@@ -75,7 +63,12 @@ abstract public class LogFileListener
     }
     void OnCreated(object sender, FileSystemEventArgs e)
     {
-        OpenFile(e.FullPath);
+        var fileStream = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+        {
+            Position = 0
+        };
+        m_reader = new StreamReader(fileStream);
+        Logger.Info($"Watching new log file: {e.FullPath}");
     }
     void OnError(object sender, ErrorEventArgs e)
     {
