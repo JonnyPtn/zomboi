@@ -11,7 +11,7 @@ namespace zomboi
 {
     public class Server
     {
-         private static string serverPath = "server";
+        private static string serverPath = "server";
         public static string StartPath { get 
         {
             if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -29,7 +29,8 @@ namespace zomboi
         }}
         private Process m_process = new();
 
-        public bool IsRunning { get { return m_process.StartInfo.FileName.Length > 0 && !m_process.HasExited; } }
+        public bool IsRunning { get { return (IsChildProcess && m_process.StartInfo.FileName.Length > 0) && !m_process.HasExited; } }
+        public bool IsChildProcess { get; private set; }
         public static bool IsInstalled { get { return Directory.Exists(serverPath); } }
         public static bool IsCreated { get { return File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini")); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Logs")); } }
@@ -43,6 +44,9 @@ namespace zomboi
             m_client = client;
         }
 
+        public delegate void PlayerAdded(Player player);
+        public event PlayerAdded OnPlayerAdded;
+
         private readonly StreamWriter m_logStream = new StreamWriter(new FileStream("server.log", FileMode.Create));
 
         public Player GetOrCreatePlayer(string playerName)
@@ -52,6 +56,7 @@ namespace zomboi
             {
                 Logger.Info($"Adding Player {playerName}");
                 m_players.Add(new Player(playerName, new Vector2(), new List<Perk>()));
+                OnPlayerAdded.Invoke(m_players.Last());
             }
             return existing??m_players.Find(x => x.Name == playerName)??m_players.Last();
         }
@@ -69,6 +74,7 @@ namespace zomboi
             else if (existing.Count() == 1)
             {
                 m_process = existing[0];
+                IsChildProcess = false;
             }
             else
             {
@@ -82,6 +88,7 @@ namespace zomboi
                 {
                     m_process.BeginErrorReadLine();
                     m_process.BeginOutputReadLine();
+                    IsChildProcess = true;
                 }
                 else
                 {
@@ -100,9 +107,18 @@ namespace zomboi
         {
             await m_client.SetGameAsync(null);
             await m_client.SetStatusAsync(UserStatus.DoNotDisturb);
-            await m_process.StandardInput.WriteLineAsync("save");
-            await m_process.StandardInput.WriteLineAsync("quit");
-            await m_process.WaitForExitAsync();
+            if (IsChildProcess)
+            {
+                await m_process.StandardInput.WriteLineAsync("save");
+                await m_process.StandardInput.WriteLineAsync("quit");
+                m_process.WaitForExit(TimeSpan.FromSeconds(30));
+            }
+            if (IsRunning)
+            {
+                Logger.Info("Unable to stop server cleanly, will be killed");
+                m_process.Kill();
+            }
+            IsChildProcess = false;
         }
 
         private async Task DownloadSteamCMD()

@@ -1,10 +1,6 @@
 ﻿using Discord;
-using Discord.Interactions;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
-using System.Collections.Specialized;
 using System.Numerics;
-using System.Security.Cryptography.X509Certificates;
 
 namespace zomboi
 {
@@ -15,6 +11,17 @@ namespace zomboi
         public Playerlistener(Server server) : base("*user.txt")
         {
             m_server = server;
+            m_server.OnPlayerAdded += OnPlayerAdded;
+        }
+
+        public async void OnPlayerAdded(Player player)
+        {
+            if (m_channel == null)
+            {
+                Logger.Warn("Player notification channel not set");
+                return;
+            }
+            await m_channel.SendMessageAsync($":wave: {player.Name} has connected");
         }
 
         public void SetChannel(DiscordSocketClient client, string channelID)
@@ -34,6 +41,11 @@ namespace zomboi
 
         override protected async Task<bool> Parse(LogLine line)
         {
+            if (m_channel == null)
+            {
+                Logger.Warn("Player notification channel not set");
+                return false;
+            }
             string message = "";
             if (line.Message.Contains("fully connected"))
             {
@@ -55,7 +67,7 @@ namespace zomboi
                 if (player.LastSeen < line.TimeStamp)
                 {
                     player.LastSeen = line.TimeStamp;
-                    message = $":wave: {name} has connected";
+                    return true;
                 }
             }
             else if (line.Message.Contains("disconnected"))
@@ -69,18 +81,9 @@ namespace zomboi
                 if (player.LastSeen < line.TimeStamp)
                 {
                     player.LastSeen = line.TimeStamp;
-                    message = $":runner: {name} has disconnected";
+                    await m_channel.SendMessageAsync(message);
+                    return true;
                 }
-            }
-
-            if (m_channel == null)
-            {
-                Logger.Warn("Player notification channel not set");
-            }
-            else if (message != "")
-            {
-                await m_channel.SendMessageAsync(message);
-                return true;
             }
             return false;
         }
