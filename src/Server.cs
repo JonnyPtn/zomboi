@@ -123,6 +123,7 @@ namespace zomboi
                 m_process.BeginOutputReadLine();
                 IsChildProcess = true;
                 m_startTime = DateTime.Now;
+                Logger.Info("Server started");
             }
             else
             {
@@ -154,80 +155,30 @@ namespace zomboi
                 m_process.Kill();
 
             }
+            Logger.Info("Server stopped");
             IsChildProcess = false;
         }
 
-        private async Task DownloadSteamCMD()
-        {
-            await m_client.SetActivityAsync(new Game("updating steam", ActivityType.Streaming, ActivityProperties.Sync));
-            await m_client.SetStatusAsync(UserStatus.DoNotDisturb);
-            var downloadFile = "steamcmd.file";
-            if (!File.Exists(downloadFile))
-            {
-                using (var client = new HttpClient())
-                {
-                    string uri = "https://steamcdn-a.akamaihd.net/client/installer/steamcmd";
-
-                    if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    {
-                        uri += ".zip";
-                    }
-                    else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                    {
-                        uri += "_osx.tar.gz";
-                    }
-                    else
-                    {
-                        uri += "_linux.tar.gz";
-                    }
-                    using (var s = await client.GetStreamAsync(uri))
-                    {
-                        using (var fs = new FileStream(downloadFile, FileMode.CreateNew))
-                        {
-                            await s.CopyToAsync(fs);
-                        }
-                    }
-                }
-            }
-
-            var unpackedPath = "steamcmd";
-            if (!Directory.Exists(unpackedPath))
-            {
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    ZipFile.ExtractToDirectory(downloadFile, unpackedPath);
-                }
-                else
-                {
-                    Directory.CreateDirectory(unpackedPath);
-                    using (var fs = new FileStream(downloadFile, FileMode.Open))
-                    {
-                        using (var gz = new GZipStream(fs, CompressionMode.Decompress))
-                        {
-                            await TarFile.ExtractToDirectoryAsync(gz, unpackedPath, true);
-                        }
-                    }
-                }
-            }
-        }
         public async Task Create(string password)
         {
             await Start();
             await m_process.StandardInput.WriteLineAsync(password); // Set the password
             await m_process.StandardInput.WriteLineAsync(password); // Confirm the password
             await Stop();
+            Logger.Info("Server created");
         }
 
-        public static void AddMod(string modID)
+        public static void AddMod(Int64 modID, string modName)
         {
             if (IsCreated)
             {
+                bool addedId = false, addedName = false;
                 var lines = File.ReadAllLines(m_configPath);
                 foreach (var line in lines.Select((value, i) => new { i, value }))
                 {
                     if (line.value.Contains("WorkshopItems"))
                     {
-                        if (line.value.Contains(modID))
+                        if (line.value.Contains(modID.ToString()))
                         {
                             Logger.Warn($"Mod with id {modID} already added");
                             return;
@@ -240,7 +191,30 @@ namespace zomboi
                         {
                             lines[line.i] = line.value + "," + modID;
                         }
+                        addedId = true;
+                    }
+                    else if (line.value.Contains("Mods"))
+                    {
+                        if (line.value.Contains(modName))
+                        {
+                            Logger.Warn($"Mod with id {modName} already added");
+                            return;
+                        }
+                        if (line.value.Trim().EndsWith("="))
+                        {
+                            lines[line.i] = line.value + modName;
+                        }
+                        else
+                        {
+                            lines[line.i] = line.value + "," + modName;
+                        }
+                        addedName = true;
+                    }
+
+                    if (addedName && addedId)
+                    {
                         File.WriteAllLines(m_configPath, lines);
+                        Logger.Info($"Mod added: {modName} ({modID})");
                         return;
                     }
                 }
