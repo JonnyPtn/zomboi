@@ -9,8 +9,8 @@ namespace zomboi
 {
     public class Server
     {
-        private static string m_serverPath = "server";
-        private static string m_configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini");
+        private static readonly string m_serverPath = "server";
+        private static readonly string m_configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini");
         public static string StartPath
         {
             get
@@ -51,7 +51,7 @@ namespace zomboi
         public delegate void PlayerJoined(Player player);
         public event PlayerJoined? OnPlayerJoined;
 
-        private readonly StreamWriter m_logStream = new StreamWriter(new FileStream("server.log", FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
+        private readonly StreamWriter m_logStream = new (new FileStream("server.log", FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
 
         public Player GetOrCreatePlayer(string playerName, DateTime seenTime)
         {
@@ -87,7 +87,7 @@ namespace zomboi
                 return false;
             }
             var existing = Process.GetProcessesByName("ProjectZomboid64");
-            if (existing.Count() > 1)
+            if (existing.Length > 1)
             {
                 var error = $"Found {existing.Count()} existing server processes";
                 Logger.Error(error);

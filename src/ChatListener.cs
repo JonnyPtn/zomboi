@@ -29,12 +29,7 @@ namespace zomboi
                 Logger.Error($"Channel ID {channelID} does not appear to be valid");
             }
 
-            var webhookChannel = m_channel as IIntegrationChannel;
-            if (webhookChannel == null)
-            {
-                Logger.Error($"Unable to create webhook on channel {channelID}");
-            }
-            else
+            if (m_channel is IIntegrationChannel webhookChannel)
             {
                 // Possibly naive to assume we're the only webhook on the channel
                 var webhooks = webhookChannel.GetWebhooksAsync().Result;
@@ -47,6 +42,10 @@ namespace zomboi
                 {
                     m_webhookClient = new DiscordWebhookClient(webhooks.First());
                 }
+            }
+            else
+            {
+                Logger.Error($"Unable to create webhook on channel {channelID}");
             }
         }
 

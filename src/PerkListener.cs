@@ -52,7 +52,7 @@ namespace zomboi
                 closeBracket = line.Message.IndexOf("]", openBracket);
                 var perks = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
 
-                if (perks.Contains("="))
+                if (perks.Contains('='))
                 {
                     // Should be a list of key=value perks?!
                     var perkPairs = perks.Split(",", StringSplitOptions.TrimEntries);

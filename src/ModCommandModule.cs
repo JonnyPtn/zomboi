@@ -6,7 +6,7 @@ namespace zomboi
     [Group("mod", "Mod options")]
     public class ModCommandModule : InteractionModuleBase<SocketInteractionContext>
     {
-        private readonly HttpClient m_client = new HttpClient()
+        private readonly HttpClient m_client = new ()
         {
             BaseAddress = new Uri("https://api.steampowered.com"),
         };

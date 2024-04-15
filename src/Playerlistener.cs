@@ -7,7 +7,7 @@ namespace zomboi
     public class Playerlistener : LogFileListener
     {
         private IMessageChannel? m_channel;
-        private Server m_server;
+        private readonly Server m_server;
         public Playerlistener(Server server) : base("*user.txt")
         {
             m_server = server;
