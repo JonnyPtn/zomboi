@@ -1,7 +1,4 @@
-﻿
-using System.Diagnostics;
-using System.Reflection.Metadata.Ecma335;
-using Discord;
+﻿using Discord;
 using Discord.WebSocket;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -59,14 +56,14 @@ namespace zomboi
                 {
                     // Should be a list of key=value perks?!
                     var perkPairs = perks.Split(",", StringSplitOptions.TrimEntries);
-                    var perkValues = perkPairs.Select(x => 
+                    var perkValues = perkPairs.Select(x =>
                     {
                         var split = x.Split("=");
-                        return new Perk(split[0],int.Parse(split[1]));
+                        return new Perk(split[0], int.Parse(split[1]));
                     }).ToArray();
-                    
+
                     // Check against the player's perks to see if they've levelled up
-                    foreach(var perk in perkValues)
+                    foreach (var perk in perkValues)
                     {
                         var existing = player.Perks.Find(x => x.Name == perk.Name);
                         if (existing == null)

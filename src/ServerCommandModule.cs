@@ -1,13 +1,10 @@
-﻿using System.Diagnostics;
+﻿using Discord;
+using Discord.Interactions;
+using System.Diagnostics;
 using System.Formats.Tar;
 using System.IO.Compression;
 using System.Net;
-using System.Numerics;
 using System.Runtime.InteropServices;
-using Discord;
-using Discord.Interactions;
-using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace zomboi
 {
@@ -130,9 +127,9 @@ namespace zomboi
                 File.WriteAllText(Server.StartPath, file);
             }
         }
-        
+
         [DefaultMemberPermissions(GuildPermission.Administrator)]
-        [SlashCommand("create", "Create the server")]        
+        [SlashCommand("create", "Create the server")]
         public async Task Create(string password)
         {
             await RespondAsync("Creating server, please wait...", ephemeral: true);
@@ -166,7 +163,7 @@ namespace zomboi
 
                 var uptimeString = $"{m_server.UpTime.Hours}h {m_server.UpTime.Minutes}m {m_server.UpTime.Seconds}s";
 
-                embed.AddField("Up time", uptimeString )
+                embed.AddField("Up time", uptimeString)
                     .AddField("IP Address", ipAddress == null ? "Unknown" : ipAddress.ToString())
                     .AddField("Port", "16261")
                     .AddField("Player Count", m_server.PlayerCount);

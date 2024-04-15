@@ -56,7 +56,7 @@ namespace zomboi
                 // And the position will be in parentheses like (x,y,...) not sure what the last param is... floor?
                 var firstParen = line.Message.IndexOf("(");
                 var lastComma = line.Message.LastIndexOf(",");
-                var positionString = line.Message.Substring(firstParen + 1, lastComma - firstParen - 1); 
+                var positionString = line.Message.Substring(firstParen + 1, lastComma - firstParen - 1);
                 var positions = positionString.Split(',');
                 var position = new Vector2(int.Parse(positions[0]), int.Parse(positions[1]));
 

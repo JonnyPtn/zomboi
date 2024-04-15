@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-
-namespace zomboi
+﻿namespace zomboi
 {
     public class Perk
     {

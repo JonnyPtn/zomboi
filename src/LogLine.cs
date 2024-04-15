@@ -1,7 +1,6 @@
 ﻿
 
 using System.Globalization;
-using zomboi;
 
 namespace zomboi
 {
@@ -21,7 +20,7 @@ namespace zomboi
                 Logger.Error(ex.Message);
             }
         }
-        public DateTime TimeStamp {  get; }
+        public DateTime TimeStamp { get; }
         public string Message { get; }
 
         public static implicit operator string(LogLine line)

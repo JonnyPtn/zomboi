@@ -35,7 +35,7 @@ namespace zomboi
         }
 
         [SlashCommand("skills", "Show skills for a player")]
-        public async Task Skills([Summary("Name", "Name of the player to show skills for")]string playerName)
+        public async Task Skills([Summary("Name", "Name of the player to show skills for")] string playerName)
         {
             var player = m_provider.GetRequiredService<Server>().GetOrCreatePlayer(playerName, DateTime.UnixEpoch);
             if (player.Perks.Count == 0)

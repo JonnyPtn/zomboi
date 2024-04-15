@@ -1,5 +1,4 @@
 ﻿using Discord;
-using Discord.Interactions;
 using Discord.Webhook;
 using Discord.WebSocket;
 
@@ -10,7 +9,7 @@ namespace zomboi
         private DiscordWebhookClient? m_webhookClient;
         private IMessageChannel? m_channel;
         private DiscordSocketClient? m_client;
-        private DateTime    m_lastChatTime = DateTime.Now;
+        private DateTime m_lastChatTime = DateTime.Now;
         public ChatListener() : base("*chat.txt")
         {
         }
@@ -67,7 +66,7 @@ namespace zomboi
                     // the actual message will be in the format of text='<message>' so parse for that
                     var textOpener = "text='";
                     var partial = line.Message.Substring(line.Message.IndexOf(textOpener) + textOpener.Length);
-                    var chatMessage = partial.Substring(0,partial.IndexOf("'}"));
+                    var chatMessage = partial.Substring(0, partial.IndexOf("'}"));
 
                     // and the author will be in the format author='<author>'
                     var authorOpener = "author='";

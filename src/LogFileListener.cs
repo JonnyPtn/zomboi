@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using zomboi;
 
 abstract public class LogFileListener
@@ -32,7 +31,7 @@ abstract public class LogFileListener
     private async Task Update()
     {
         string? line;
-        while((line = m_reader?.ReadLine()) != null)
+        while ((line = m_reader?.ReadLine()) != null)
         {
             LogLine logLine = new(line);
             if (logLine.TimeStamp >= m_last_update)
@@ -72,7 +71,7 @@ abstract public class LogFileListener
     }
     void OnError(object sender, ErrorEventArgs e)
     {
-         var exception = e.GetException();
+        var exception = e.GetException();
         if (exception != null)
         {
             Logger.Error(exception.Message);

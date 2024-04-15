@@ -19,7 +19,7 @@ namespace zomboi
 
         private static Task DiscordLog(LogMessage msg)
         {
-            switch(msg.Severity)
+            switch (msg.Severity)
             {
                 case LogSeverity.Error:
                     Logger.Error(msg.ToString());
@@ -68,7 +68,7 @@ namespace zomboi
             {
                 Logger.Error("Token cannot be null");
                 return;
-            } 
+            }
             else if (token.Length == 0)
             {
                 Logger.Error("Token is empty");
@@ -81,11 +81,12 @@ namespace zomboi
             }
 
             // Once we're logged in, set up our channels
-            client.Ready += () => {
+            client.Ready += () =>
+            {
 
-                m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"]??"");
-                m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(client, m_configuration["bot:chat channel"]??"");
-                m_serviceProvider.GetRequiredService<PerkListener>().SetChannel(client, m_configuration["bot:skill channel"]??"");
+                m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"] ?? "");
+                m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(client, m_configuration["bot:chat channel"] ?? "");
+                m_serviceProvider.GetRequiredService<PerkListener>().SetChannel(client, m_configuration["bot:skill channel"] ?? "");
 
                 var server = m_serviceProvider.GetRequiredService<Server>();
                 if (!server.Attach())

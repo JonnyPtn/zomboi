@@ -1,11 +1,9 @@
 ﻿
-using System.Diagnostics;
-using System.Formats.Tar;
-using System.IO.Compression;
-using System.Numerics;
-using System.Runtime.InteropServices;
 using Discord;
 using Discord.WebSocket;
+using System.Diagnostics;
+using System.Numerics;
+using System.Runtime.InteropServices;
 
 namespace zomboi
 {
@@ -13,32 +11,35 @@ namespace zomboi
     {
         private static string m_serverPath = "server";
         private static string m_configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini");
-        public static string StartPath { get 
+        public static string StartPath
         {
-            if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            get
             {
-                return $"{m_serverPath}/StartServer64.bat";
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    return $"{m_serverPath}/StartServer64.bat";
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    return $"{m_serverPath}/StartServer.Command";
+                }
+                else
+                {
+                    return $"{m_serverPath}/start-server.sh";
+                }
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-            {
-                return $"{m_serverPath}/StartServer.Command";
-            }
-            else
-            {
-                return $"{m_serverPath}/start-server.sh";
-            }
-        }}
+        }
         private Process? m_process;
 
         public bool IsRunning { get { return m_process != null && !m_process.HasExited; } }
-        public TimeSpan UpTime { get { return DateTime.Now - m_startTime;} }
-        public bool IsChildProcess { get; private set; }
+        public TimeSpan UpTime { get { return DateTime.Now - m_startTime; } }
+        private bool m_childProcess = false;
         public static bool IsInstalled { get { return Directory.Exists(m_serverPath); } }
         public static bool IsCreated { get { return File.Exists(m_configPath); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Logs")); } }
         private List<Player> m_players = new();
-        public List<Player> Players { get { return m_players;}}
-        public int PlayerCount { get { return m_players.Count;}}
+        public List<Player> Players { get { return m_players; } }
+        public int PlayerCount { get { return m_players.Count; } }
         private readonly DiscordSocketClient m_client;
         private DateTime m_startTime = DateTime.Now;
 
@@ -94,14 +95,14 @@ namespace zomboi
             else if (existing.Count() == 1)
             {
                 m_process = existing[0];
-                IsChildProcess = false;
+                m_childProcess = false;
                 m_startTime = DateTime.Now;
                 Logger.Info("Attached to server process");
                 return true;
             }
             return false;
         }
-        
+
         public async Task<bool> Start()
         {
             if (IsRunning)
@@ -121,7 +122,7 @@ namespace zomboi
             {
                 m_process.BeginErrorReadLine();
                 m_process.BeginOutputReadLine();
-                IsChildProcess = true;
+                m_childProcess = true;
                 m_startTime = DateTime.Now;
                 Logger.Info("Server started");
             }
@@ -140,7 +141,7 @@ namespace zomboi
         {
             await m_client.SetGameAsync(null);
             await m_client.SetStatusAsync(UserStatus.DoNotDisturb);
-            if (IsChildProcess && IsRunning)
+            if (m_childProcess && IsRunning && m_process != null)
             {
                 await m_process.StandardInput.WriteLineAsync("save");
                 await m_process.StandardInput.WriteLineAsync("quit");
@@ -149,23 +150,31 @@ namespace zomboi
                 m_logStream.Flush();
                 m_process.WaitForExit(TimeSpan.FromSeconds(30));
             }
-            if (IsRunning)
+            if (IsRunning && m_process != null)
             {
                 Logger.Info("Unable to stop server cleanly, will be killed");
                 m_process.Kill();
 
             }
             Logger.Info("Server stopped");
-            IsChildProcess = false;
+            m_childProcess = false;
         }
 
         public async Task Create(string password)
         {
-            await Start();
-            await m_process.StandardInput.WriteLineAsync(password); // Set the password
-            await m_process.StandardInput.WriteLineAsync(password); // Confirm the password
-            await Stop();
-            Logger.Info("Server created");
+            if (m_process == null)
+            {
+                Logger.Error("Process is null");
+                return;
+            }
+            else
+            {
+                await Start();
+                await m_process.StandardInput.WriteLineAsync(password); // Set the password
+                await m_process.StandardInput.WriteLineAsync(password); // Confirm the password
+                await Stop();
+                Logger.Info("Server created");
+            }
         }
 
         public static void AddMod(Int64 modID, string modName)
