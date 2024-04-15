@@ -11,20 +11,21 @@ namespace zomboi
 {
     public class Server
     {
-        private static string serverPath = "server";
+        private static string m_serverPath = "server";
+        private static string m_configPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini");
         public static string StartPath { get 
         {
             if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                return $"{serverPath}/StartServer64.bat";
+                return $"{m_serverPath}/StartServer64.bat";
             }
             else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
             {
-                return $"{serverPath}/StartServer.Command";
+                return $"{m_serverPath}/StartServer.Command";
             }
             else
             {
-                return $"{serverPath}/start-server.sh";
+                return $"{m_serverPath}/start-server.sh";
             }
         }}
         private Process? m_process;
@@ -32,8 +33,8 @@ namespace zomboi
         public bool IsRunning { get { return m_process != null && !m_process.HasExited; } }
         public TimeSpan UpTime { get { return DateTime.Now - m_startTime;} }
         public bool IsChildProcess { get; private set; }
-        public static bool IsInstalled { get { return Directory.Exists(serverPath); } }
-        public static bool IsCreated { get { return File.Exists(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Server/servertest.ini")); } }
+        public static bool IsInstalled { get { return Directory.Exists(m_serverPath); } }
+        public static bool IsCreated { get { return File.Exists(m_configPath); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid/Logs")); } }
         private List<Player> m_players = new();
         public List<Player> Players { get { return m_players;}}
@@ -215,6 +216,40 @@ namespace zomboi
             await m_process.StandardInput.WriteLineAsync(password); // Set the password
             await m_process.StandardInput.WriteLineAsync(password); // Confirm the password
             await Stop();
+        }
+
+        public static void AddMod(string modID)
+        {
+            if (IsCreated)
+            {
+                var lines = File.ReadAllLines(m_configPath);
+                foreach (var line in lines.Select((value, i) => new { i, value }))
+                {
+                    if (line.value.Contains("WorkshopItems"))
+                    {
+                        if (line.value.Contains(modID))
+                        {
+                            Logger.Warn($"Mod with id {modID} already added");
+                            return;
+                        }
+                        if (line.value.Trim().EndsWith("="))
+                        {
+                            lines[line.i] = line.value + modID;
+                        }
+                        else
+                        {
+                            lines[line.i] = line.value + "," + modID;
+                        }
+                        File.WriteAllLines(m_configPath, lines);
+                        return;
+                    }
+                }
+
+            }
+            else
+            {
+                Logger.Error("Can't add mod before server is created");
+            }
         }
     }
 }

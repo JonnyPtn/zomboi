@@ -178,5 +178,17 @@ namespace zomboi
             }
             await RespondAsync(embed: embed.Build(), ephemeral: true);
         }
+
+        [DefaultMemberPermissions(GuildPermission.Administrator)]
+        [Group("mod", "Mods options")]
+        class ModCommandModule : InteractionModuleBase<SocketInteractionContext>
+        {
+            [SlashCommand("add", "add a mod with the given id")]
+            public async Task Add([Summary("id", "ID of the mod, this can be taken from the URL for the mod page in steamworkshop")] string id)
+            {
+                Server.AddMod(id);
+                await RespondAsync($"Mod with id {id} added", ephemeral: true);
+            }
+        }
     }
 }
