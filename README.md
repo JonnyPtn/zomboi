@@ -6,13 +6,16 @@ This is also an exercise for me to learn c# better so if you are experienced and
 
 ## Commands
 
-- `/server` Server management (starting, stopping)
-- `/create` Create a new server
-- `/install` Install (or update) the server itself via steam
-- `/players` Show details of the currently connected players
+The bot makes use of slash commands for most things, so if you start typing `/` discord will show the commands available.
+
+Features include:
+- Server management
+- Mod management
+- Player info
 
 ## Notifications
-- User join/leave notifications
+- Players joining or leaving
+- Players levelling up
 - Chat mirrored from Global in-game chat (Only game -> discord mirroring, not the other way round yet)
 
 ### Quick start
