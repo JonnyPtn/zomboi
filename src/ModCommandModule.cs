@@ -34,7 +34,7 @@ namespace zomboi
             var name = json["response"]["publishedfiledetails"][0]["title"].ToString();
             var modName = name.Replace(" ", "");
 
-            Server.AddMod(id, name);
+            Server.AddMod(id, modName);
             await RespondAsync($"Added mod: {name} ({id})", ephemeral: true);
         }
     }
