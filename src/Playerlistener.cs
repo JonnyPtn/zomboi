@@ -76,11 +76,14 @@ namespace zomboi
                 var lastQuote = line.Message.LastIndexOf("\"");
                 var name = line.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
                 var player = m_server.GetOrCreatePlayer(name, line.TimeStamp);
-                player.Online = false;
                 if (player.LastSeen < line.TimeStamp)
                 {
                     player.LastSeen = line.TimeStamp;
-                    await m_channel.SendMessageAsync($":person_running: {player.Name} has left");
+                    if (player.Online)
+                    {
+                        player.Online = false;
+                        await m_channel.SendMessageAsync($":person_running: {player.Name} has left");
+                    }
                     return true;
                 }
             }
