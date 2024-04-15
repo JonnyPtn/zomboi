@@ -45,6 +45,8 @@ namespace zomboi
                 closeBracket = line.Message.IndexOf("]", openBracket);
                 var name = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
 
+                var player = m_provider.GetRequiredService<Server>().GetOrCreatePlayer(name, line.TimeStamp);
+
                 openBracket = line.Message.IndexOf("[", closeBracket);
                 closeBracket = line.Message.IndexOf("]", openBracket);
                 var position = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
@@ -62,8 +64,6 @@ namespace zomboi
                         var split = x.Split("=");
                         return new Perk(split[0],int.Parse(split[1]));
                     }).ToArray();
-
-                    var player = m_provider.GetRequiredService<Server>().GetOrCreatePlayer(name, line.TimeStamp);
                     
                     // Check against the player's perks to see if they've levelled up
                     foreach(var perk in perkValues)
@@ -80,6 +80,28 @@ namespace zomboi
                         }
                     }
                     return true;
+                }
+                else if (perks.Contains("Level Changed"))
+                {
+                    openBracket = line.Message.IndexOf("[", closeBracket);
+                    closeBracket = line.Message.IndexOf("]", openBracket);
+                    var perkName = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
+
+                    openBracket = line.Message.IndexOf("[", closeBracket);
+                    closeBracket = line.Message.IndexOf("]", openBracket);
+                    var level = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
+
+                    var current = player.Perks.Find(x => x.Name == perkName);
+                    if (current == null)
+                    {
+                        Logger.Warn($"Unexpected skill for player: {perkName}");
+                    }
+                    else
+                    {
+                        await m_channel.SendMessageAsync($":chart_with_upwards_trend: {player.Name} has achieved level {level} in {perkName}");
+                        current.Level = int.Parse(level);
+                        return true;
+                    }
                 }
             }
             return false;
