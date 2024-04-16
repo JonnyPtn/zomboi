@@ -161,7 +161,7 @@ namespace zomboi
                     Logger.Error("Unable to get external IP address");
                 }
 
-                var uptimeString = $"{m_server.UpTime.Hours}h {m_server.UpTime.Minutes}m {m_server.UpTime.Seconds}s";
+                var uptimeString = $" {m_server.UpTime.Days}d {m_server.UpTime.Hours}h {m_server.UpTime.Minutes}m {m_server.UpTime.Seconds}s";
 
                 embed.AddField("Up time", uptimeString)
                     .AddField("IP Address", ipAddress == null ? "Unknown" : ipAddress.ToString())
