@@ -473,62 +473,54 @@ namespace zomboi
             return condition();
         }
 
-        public static void AddMod(Int64 modID, string modName)
+        /// <summary>
+        /// Add a workshop item to the server's config, where the ids go in WorkshopItems and the names
+        /// in Mods, both as comma separated lists.
+        /// </summary>
+        public bool AddMod(Int64 modID, string modName)
         {
-            if (IsCreated)
-            {
-                bool addedId = false, addedName = false;
-                var lines = File.ReadAllLines(m_configPath);
-                foreach (var line in lines.Select((value, i) => new { i, value }))
-                {
-                    if (line.value.Contains("WorkshopItems"))
-                    {
-                        if (line.value.Contains(modID.ToString()))
-                        {
-                            Logger.Warn($"Mod with id {modID} already added");
-                            return;
-                        }
-                        if (line.value.Trim().EndsWith("="))
-                        {
-                            lines[line.i] = line.value + modID;
-                        }
-                        else
-                        {
-                            lines[line.i] = line.value + "," + modID;
-                        }
-                        addedId = true;
-                    }
-                    else if (line.value.Contains("Mods"))
-                    {
-                        if (line.value.Contains(modName))
-                        {
-                            Logger.Warn($"Mod with id {modName} already added");
-                            return;
-                        }
-                        if (line.value.Trim().EndsWith("="))
-                        {
-                            lines[line.i] = line.value + modName;
-                        }
-                        else
-                        {
-                            lines[line.i] = line.value + "," + modName;
-                        }
-                        addedName = true;
-                    }
-
-                    if (addedName && addedId)
-                    {
-                        File.WriteAllLines(m_configPath, lines);
-                        Logger.Info($"Mod added: {modName} ({modID})");
-                        return;
-                    }
-                }
-
-            }
-            else
+            if (!IsCreated)
             {
                 Logger.Error("Can't add mod before server is created");
+                return false;
             }
+
+            string[] lines;
+            try
+            {
+                lines = File.ReadAllLines(m_configPath);
+            }
+            catch (Exception exception)
+            {
+                Logger.Error($"Couldn't read {m_configPath}: {exception.Message}");
+                return false;
+            }
+
+            // Both have to be there, or we'd write out a server that loads a mod it has no id for
+            if (!ConfigList.TryAdd(lines, "WorkshopItems", modID.ToString(), out var idAdded) ||
+                !ConfigList.TryAdd(lines, "Mods", modName, out var nameAdded))
+            {
+                Logger.Error($"{m_configPath} doesn't have both a WorkshopItems and a Mods line, so " +
+                    $"{modName} ({modID}) wasn't added");
+                return false;
+            }
+            if (!idAdded && !nameAdded)
+            {
+                Logger.Warn($"Mod already added: {modName} ({modID})");
+                return true;
+            }
+
+            try
+            {
+                File.WriteAllLines(m_configPath, lines);
+            }
+            catch (Exception exception)
+            {
+                Logger.Error($"Couldn't write {m_configPath}: {exception.Message}");
+                return false;
+            }
+            Logger.Info($"Mod added: {modName} ({modID})");
+            return true;
         }
     }
 }
