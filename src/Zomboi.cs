@@ -81,19 +81,25 @@ namespace zomboi
             }
 
             // Once we're logged in, set up our channels
-            client.Ready += () =>
+            client.Ready += async () =>
             {
-
-                m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"] ?? "");
-                m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(client, m_configuration["bot:chat channel"] ?? "");
-                m_serviceProvider.GetRequiredService<PerkListener>().SetChannel(client, m_configuration["bot:skill channel"] ?? "");
-
-                var server = m_serviceProvider.GetRequiredService<Server>();
-                if (!server.Attach())
+                try
                 {
-                    return server.Start();
+                    m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"] ?? "");
+                    await m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(client, m_configuration["bot:chat channel"] ?? "");
+                    m_serviceProvider.GetRequiredService<PerkListener>().SetChannel(client, m_configuration["bot:skill channel"] ?? "");
+
+                    var server = m_serviceProvider.GetRequiredService<Server>();
+                    if (!server.Attach())
+                    {
+                        await server.Start();
+                    }
                 }
-                return Task.CompletedTask;
+                catch (Exception exception)
+                {
+                    // Anything escaping here just gets logged by discord as an unhandled handler exception
+                    DiscordError.Log("set up the bot's channels", exception);
+                }
             };
 
             await client.LoginAsync(TokenType.Bot, token);
