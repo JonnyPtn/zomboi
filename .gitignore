@@ -13,3 +13,5 @@
 .vscode
 /logs
 /server.log
+bin/
+obj/
