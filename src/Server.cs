@@ -253,18 +253,27 @@ namespace zomboi
                 return false;
             }
             var existing = Process.GetProcessesByName("ProjectZomboid64");
-            if (existing.Length > 1)
+            try
             {
-                var error = $"Found {existing.Count()} existing server processes";
-                Logger.Error(error);
+                if (existing.Length > 1)
+                {
+                    Logger.Error($"Found {existing.Length} existing server processes");
+                }
+                else if (existing.Length == 1)
+                {
+                    m_process = existing[0];
+                    m_childProcess = false;
+                    m_startTime = DateTime.Now;
+                    Logger.Info("Attached to server process");
+                    return true;
+                }
             }
-            else if (existing.Count() == 1)
+            finally
             {
-                m_process = existing[0];
-                m_childProcess = false;
-                m_startTime = DateTime.Now;
-                Logger.Info("Attached to server process");
-                return true;
+                foreach (var process in existing.Where(process => process != m_process))
+                {
+                    process.Dispose();
+                }
             }
             return false;
         }
@@ -347,31 +356,50 @@ namespace zomboi
             }
         }
 
-        public async Task Stop()
+        public async Task<bool> Stop()
         {
+            if (!IsRunning || m_process == null)
+            {
+                Logger.Warn("Trying to stop a server that isn't running");
+                return false;
+            }
+
             await m_client.SetGameAsync(null);
             await m_client.SetStatusAsync(UserStatus.DoNotDisturb);
-            if (m_childProcess && IsRunning && m_process != null)
+            if (m_childProcess)
             {
-                await m_process.StandardInput.WriteLineAsync("save");
-                await m_process.StandardInput.WriteLineAsync("quit");
-                // A steam managed install still has the PAUSE in its launcher, which would sit
-                // waiting for a keypress once the server itself is gone. Closing input gives it
-                // the end of file it needs to fall through and exit.
-                m_process.StandardInput.Close();
-                m_process.CancelErrorRead();
-                m_process.CancelOutputRead();
-                m_process.WaitForExit(TimeSpan.FromSeconds(30));
+                try
+                {
+                    await m_process.StandardInput.WriteLineAsync("save");
+                    await m_process.StandardInput.WriteLineAsync("quit");
+                    // A steam managed install still has the PAUSE in its launcher, which would sit
+                    // waiting for a keypress once the server itself is gone. Closing input gives it
+                    // the end of file it needs to fall through and exit.
+                    m_process.StandardInput.Close();
+                    m_process.CancelErrorRead();
+                    m_process.CancelOutputRead();
+                    m_process.WaitForExit(TimeSpan.FromSeconds(30));
+                }
+                catch (Exception exception)
+                {
+                    // If it died between the check and the quit there's nothing to save, but we
+                    // still owe it a kill and a tidy up below
+                    Logger.Warn($"Couldn't shut the server down cleanly: {exception.Message}");
+                }
             }
-            if (IsRunning && m_process != null)
+            if (IsRunning)
             {
                 Logger.Info("Unable to stop server cleanly, will be killed");
                 // We start the launcher rather than the server, so killing just our own child
                 // would leave the actual server process running
                 m_process.Kill(entireProcessTree: true);
+                m_process.WaitForExit(TimeSpan.FromSeconds(10));
             }
             Logger.Info("Server stopped");
             m_childProcess = false;
+            m_process.Dispose();
+            m_process = null;
+            return true;
         }
 
         /// <summary>
