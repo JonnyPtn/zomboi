@@ -1,4 +1,4 @@
-﻿using Discord;
+using Discord;
 using Discord.Webhook;
 using Discord.WebSocket;
 
@@ -47,39 +47,46 @@ namespace zomboi
         {
             if (m_client == null || m_webhookClient == null)
             {
-                Logger.Warn($"Client(s) are null, something gone wrong?");
+                // SetChannel already said why, so don't repeat it for every line the server writes
                 return false;
             }
-            if (line.TimeStamp > m_lastChatTime)
+            if (line.TimeStamp <= m_lastChatTime)
             {
-                m_lastChatTime = line.TimeStamp;
-                // We only want to mirror general/global messages
-                if (line.Message.Contains("Got message") && line.Message.Contains("chat=General"))
-                {
-                    // the actual message will be in the format of text='<message>' so parse for that
-                    var textOpener = "text='";
-                    var partial = line.Message.Substring(line.Message.IndexOf(textOpener) + textOpener.Length);
-                    var chatMessage = partial.Substring(0, partial.IndexOf("'}"));
-
-                    // and the author will be in the format author='<author>'
-                    var authorOpener = "author='";
-                    partial = line.Message.Substring(line.Message.IndexOf(authorOpener) + authorOpener.Length);
-                    var author = partial.Substring(0, partial.IndexOf("'"));
-
-                    // Check if there's a discord user with a matching name, and use their picture if so
-                    var user = m_client.GetUser(author);
-                    if (user != null)
-                    {
-                        await m_webhookClient.SendMessageAsync(text: chatMessage, username: user.GlobalName, avatarUrl: user.GetAvatarUrl());
-                    }
-                    else
-                    {
-                        await m_webhookClient.SendMessageAsync(text: chatMessage, username: author, avatarUrl: m_client.CurrentUser.GetAvatarUrl());
-                    }
-                    return true;
-                }
+                return false;
             }
-            return false;
+            m_lastChatTime = line.TimeStamp;
+
+            // We only want to mirror general/global messages
+            if (!line.Message.Contains("Got message") || !line.Message.Contains("chat=General"))
+            {
+                return false;
+            }
+
+            // The body comes through as text='<message>'} at the end of the line and the author as
+            // author='<author>'. Read the body to the last closer, so a quote in it survives.
+            if (!LogFields.TryReadField(line.Message, "text='", "'}", out var chatMessage, last: true) ||
+                !LogFields.TryReadField(line.Message, "author='", "'", out var author))
+            {
+                Logger.Warn($"Couldn't find the author and message in: {line.Message}");
+                return false;
+            }
+            if (chatMessage.Length == 0 || author.Length == 0)
+            {
+                // Discord rejects an empty message
+                return true;
+            }
+
+            // Check if there's a discord user with a matching name, and use their picture if so
+            var user = m_client.GetUser(author);
+            if (user != null)
+            {
+                await m_webhookClient.SendMessageAsync(text: chatMessage, username: user.GlobalName, avatarUrl: user.GetAvatarUrl());
+            }
+            else
+            {
+                await m_webhookClient.SendMessageAsync(text: chatMessage, username: author, avatarUrl: m_client.CurrentUser.GetAvatarUrl());
+            }
+            return true;
         }
     }
 }
