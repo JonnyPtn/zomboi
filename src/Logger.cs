@@ -25,10 +25,8 @@ namespace zomboi
             Console.ForegroundColor = ConsoleColor.DarkYellow;
             Console.Error.WriteLine(message);
             Console.ResetColor();
-            if (Debugger.IsAttached)
-            {
-                Debugger.Break();
-            }
+            // No break here - warnings come from ordinary things like an odd log line, and stopping
+            // the debugger on every one makes it unusable
         }
 
     }
