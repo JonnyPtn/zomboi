@@ -199,12 +199,12 @@ namespace zomboi
                 if (halfInstalled != null)
                 {
                     Logger.Error($"{halfInstalled} has no launcher in it ({string.Join(" or ", LauncherNames)}), " +
-                        "so the install didn't finish. Run /server install again.");
+                        "so the install didn't finish. Run /zomboi install again.");
                 }
                 else
                 {
                     Logger.Error($"No server found. Looked in: {string.Join(", ", SearchPaths)}. " +
-                        "Use the /server install command to download it from steam and /server create to set it " +
+                        "Use the /zomboi install command to download it from steam and /zomboi create to set it " +
                         "up, or set 'path' in the [server] section of zomboi.ini if it's already installed elsewhere.");
                 }
                 return false;
