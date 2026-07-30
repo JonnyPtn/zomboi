@@ -116,9 +116,17 @@ namespace zomboi
         public bool IsInstalled { get { return StartPath != null; } }
         public static bool IsCreated { get { return File.Exists(m_configPath); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(m_userDataPath, "Logs")); } }
-        private List<Player> m_players = new();
-        public List<Player> Players { get { return m_players; } }
-        public int PlayerCount { get { return m_players.Count; } }
+        private readonly List<Player> m_players = new();
+        // The log listeners add to this from thread pool threads while the commands read it
+        private readonly object m_playersLock = new();
+
+        /// <summary>
+        /// A snapshot of every player we've seen this run, safe to enumerate while the listeners work.
+        /// </summary>
+        public List<Player> Players { get { lock (m_playersLock) { return new List<Player>(m_players); } } }
+        public List<Player> OnlinePlayers { get { lock (m_playersLock) { return m_players.FindAll(player => player.Online); } } }
+        public int PlayerCount { get { lock (m_playersLock) { return m_players.Count(player => player.Online); } } }
+
         private readonly DiscordSocketClient m_client;
         private readonly IConfiguration m_configuration;
         private DateTime m_startTime = DateTime.Now;
@@ -129,31 +137,96 @@ namespace zomboi
             m_configuration = configuration;
         }
 
-        public delegate void PlayerJoined(Player player);
+        public delegate Task PlayerJoined(Player player);
         public event PlayerJoined? OnPlayerJoined;
 
         private readonly StreamWriter m_logStream = new (new FileStream("server.log", FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
 
+        /// <summary>
+        /// The player we know by that name, or null if we haven't seen them this run.
+        /// </summary>
+        public Player? FindPlayer(string playerName)
+        {
+            lock (m_playersLock)
+            {
+                return m_players.Find(x => string.Equals(x.Name, playerName, StringComparison.OrdinalIgnoreCase));
+            }
+        }
+
+        /// <summary>
+        /// The player we know by that name, adding them if this is the first we've heard of them. This
+        /// isn't the same as them connecting, which only the player log can tell us about.
+        /// </summary>
         public Player GetOrCreatePlayer(string playerName, DateTime seenTime)
         {
-            var player = m_players.Find(x => x.Name == playerName);
-            if (player == null)
+            lock (m_playersLock)
             {
-                Logger.Info($"Adding Player {playerName}");
-                player = new Player(playerName, seenTime, new Vector2(), new List<Perk>());
-                m_players.Add(player);
-            }
-
-            // if it was before the server started then don't send an event
-            if (seenTime > m_startTime && !player.Online)
-            {
-                if (OnPlayerJoined != null)
+                var existing = m_players.Find(x => x.Name == playerName);
+                if (existing != null)
                 {
-                    OnPlayerJoined.Invoke(m_players.Last());
+                    return existing;
+                }
+                Logger.Info($"Adding Player {playerName}");
+                var player = new Player(playerName, seenTime, new Vector2(), new List<Perk>());
+                m_players.Add(player);
+                return player;
+            }
+        }
+
+        /// <summary>
+        /// Record a player connecting, telling anyone listening if they weren't already online.
+        /// </summary>
+        public async Task<Player> PlayerConnected(string playerName, DateTime seenTime, Vector2? position)
+        {
+            var player = GetOrCreatePlayer(playerName, seenTime);
+            bool joined;
+            lock (m_playersLock)
+            {
+                // If it was before the server started then it's history, not someone joining now
+                joined = !player.Online && seenTime > m_startTime;
+                player.Online = true;
+                if (position != null)
+                {
+                    player.Position = position.Value;
+                }
+                if (player.LastSeen < seenTime)
+                {
+                    player.LastSeen = seenTime;
                 }
             }
 
+            if (joined && OnPlayerJoined != null)
+            {
+                // Invoke the handlers by hand so each one is awaited, rather than just the last
+                foreach (PlayerJoined handler in OnPlayerJoined.GetInvocationList())
+                {
+                    await handler(player);
+                }
+            }
             return player;
+        }
+
+        /// <summary>
+        /// Record a player disconnecting.
+        /// </summary>
+        /// <returns>Whether they were online, so we don't announce the same player leaving twice</returns>
+        public bool PlayerDisconnected(string playerName, DateTime seenTime)
+        {
+            var player = GetOrCreatePlayer(playerName, seenTime);
+            lock (m_playersLock)
+            {
+                if (player.LastSeen > seenTime)
+                {
+                    return false;
+                }
+                player.LastSeen = seenTime;
+                if (!player.Online)
+                {
+                    return false;
+                }
+                player.Online = false;
+                return true;
+            }
         }
 
         public bool Attach()

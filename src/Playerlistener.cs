@@ -1,4 +1,4 @@
-﻿using Discord;
+using Discord;
 using Discord.WebSocket;
 using System.Numerics;
 
@@ -14,7 +14,7 @@ namespace zomboi
             m_server.OnPlayerJoined += OnPlayerAdded;
         }
 
-        public async void OnPlayerAdded(Player player)
+        public async Task OnPlayerAdded(Player player)
         {
             if (m_channel == null)
             {
@@ -33,49 +33,35 @@ namespace zomboi
         {
             if (m_channel == null)
             {
-                Logger.Warn("Player notification channel not set");
                 return false;
             }
+
             if (line.Message.Contains("fully connected"))
             {
-                // The only part of this line in quotes should be the player name, so find that
-                var firstQuote = line.Message.IndexOf("\"");
-                var lastQuote = line.Message.LastIndexOf("\"");
-                var name = line.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-
-                // And the position will be in parentheses like (x,y,...) not sure what the last param is... floor?
-                var firstParen = line.Message.IndexOf("(");
-                var lastComma = line.Message.LastIndexOf(",");
-                var positionString = line.Message.Substring(firstParen + 1, lastComma - firstParen - 1);
-                var positions = positionString.Split(',');
-                var position = new Vector2(int.Parse(positions[0]), int.Parse(positions[1]));
-
-                var player = m_server.GetOrCreatePlayer(name, line.TimeStamp);
-                player.Online = true;
-                player.Position = position;
-                if (player.LastSeen < line.TimeStamp)
+                if (!LogFields.TryReadQuotedName(line.Message, out var name))
                 {
-                    player.LastSeen = line.TimeStamp;
-                    return true;
+                    Logger.Warn($"No player name in: {line.Message}");
+                    return false;
                 }
+
+                // The position is in parentheses like (x,y,...), not sure what the last param is... floor?
+                Vector2? position = LogFields.TryReadPosition(line.Message, out var parsed) ? parsed : null;
+                await m_server.PlayerConnected(name, line.TimeStamp, position);
+                return true;
             }
             else if (line.Message.Contains("disconnected"))
             {
-                // The only part of this line in quotes should be the player name, so find that
-                var firstQuote = line.Message.IndexOf("\"");
-                var lastQuote = line.Message.LastIndexOf("\"");
-                var name = line.Message.Substring(firstQuote + 1, lastQuote - firstQuote - 1);
-                var player = m_server.GetOrCreatePlayer(name, line.TimeStamp);
-                if (player.LastSeen < line.TimeStamp)
+                if (!LogFields.TryReadQuotedName(line.Message, out var name))
                 {
-                    player.LastSeen = line.TimeStamp;
-                    if (player.Online)
-                    {
-                        player.Online = false;
-                        await m_channel.SendMessageAsync($":person_running: {player.Name} has left");
-                    }
-                    return true;
+                    Logger.Warn($"No player name in: {line.Message}");
+                    return false;
                 }
+
+                if (m_server.PlayerDisconnected(name, line.TimeStamp))
+                {
+                    await m_channel.SendMessageAsync($":person_running: {name} has left");
+                }
+                return true;
             }
             return false;
         }
