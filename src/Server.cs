@@ -140,7 +140,13 @@ namespace zomboi
         public delegate Task PlayerJoined(Player player);
         public event PlayerJoined? OnPlayerJoined;
 
-        private readonly StreamWriter m_logStream = new (new FileStream("server.log", FileMode.Create, FileAccess.Write, FileShare.ReadWrite));
+        // Both the output and error handlers write to this from their own threads
+        private readonly TextWriter m_logStream = TextWriter.Synchronized(
+            new StreamWriter(new FileStream("server.log", FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
+            {
+                // Without this the log sits empty until the buffer fills
+                AutoFlush = true
+            });
 
         /// <summary>
         /// The player we know by that name, or null if we haven't seen them this run.
@@ -291,8 +297,8 @@ namespace zomboi
             m_process.StartInfo.RedirectStandardInput = true;
             m_process.StartInfo.RedirectStandardOutput = true;
             m_process.StartInfo.RedirectStandardError = true;
-            m_process.OutputDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
-            m_process.ErrorDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
+            m_process.OutputDataReceived += (sender, e) => OnServerOutput(e.Data);
+            m_process.ErrorDataReceived += (sender, e) => OnServerOutput(e.Data);
             try
             {
                 if (!m_process.Start())
@@ -316,6 +322,15 @@ namespace zomboi
             return true;
         }
 
+        private void OnServerOutput(string? data)
+        {
+            if (data == null)
+            {
+                return;
+            }
+            m_logStream.WriteLine(data);
+        }
+
         public async Task Stop()
         {
             await m_client.SetGameAsync(null);
@@ -330,7 +345,6 @@ namespace zomboi
                 m_process.StandardInput.Close();
                 m_process.CancelErrorRead();
                 m_process.CancelOutputRead();
-                m_logStream.Flush();
                 m_process.WaitForExit(TimeSpan.FromSeconds(30));
             }
             if (IsRunning && m_process != null)
