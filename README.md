@@ -49,10 +49,10 @@ Copy the `zomboi.ini.sample` file and rename to `zomboi.ini` then populate with 
 
 ## Server installation
 
-If you don't have a server yet, run `/server install` then `/server create <password>`. The bot looks for an existing install in order:
+If you don't have a server yet, run `/zomboi install` then `/zomboi create <password>`. The bot looks for an existing install in order:
 
 1. `path` in the `[server]` section of `zomboi.ini`
-2. A `server` folder next to the bot, where `/server install` puts it
+2. A `server` folder next to the bot, where `/zomboi install` puts it
 3. Steam's [default library location](https://pzwiki.net/wiki/Dedicated_server) for your platform, e.g. `C:\Program Files (x86)\Steam\steamapps\common\Project Zomboid Dedicated Server`
 
-Set `path` if your server is somewhere else - that's also where `/server install` will put it.
+Set `path` if your server is somewhere else - that's also where `/zomboi install` will put it.

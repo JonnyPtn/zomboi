@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 
 namespace zomboi
 {
-    [Group("server", "Server options")]
+    [Group("zomboi", "Server options")]
     public class ServerCommandModule : InteractionModuleBase<SocketInteractionContext>
     {
         private readonly Server m_server;
