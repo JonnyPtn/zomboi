@@ -13,6 +13,10 @@ namespace zomboi
         // The install layout the server ships with, as described at https://pzwiki.net/wiki/Dedicated_server
         private const string SteamAppFolder = "Project Zomboid Dedicated Server";
         private const string LocalFolder = "server";
+        // The server asks for an administrator password on its first run, but not immediately
+        private static readonly TimeSpan PasswordPromptTimeout = TimeSpan.FromMinutes(2);
+        // And writes its config out as it finishes booting, which takes a while longer
+        private static readonly TimeSpan ConfigWriteTimeout = TimeSpan.FromMinutes(5);
         // The user data folder is the same on every platform, it's only the install that moves around
         private static readonly string m_userDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid");
         private static readonly string m_configPath = Path.Combine(m_userDataPath, "Server/servertest.ini");
@@ -74,6 +78,8 @@ namespace zomboi
         }
 
         private Process? m_process;
+        // Non-null only while we're waiting for the first run password prompt
+        private TaskCompletionSource? m_passwordPrompt;
 
         public bool IsRunning { get { return m_process != null && !m_process.HasExited; } }
         public TimeSpan UpTime { get { return DateTime.Now - m_startTime; } }
@@ -312,6 +318,8 @@ namespace zomboi
                 Logger.Error($"Failed to start {startPath}: {exception.Message}");
                 return false;
             }
+            // The server only reads whole lines, so don't let anything we write sit in a buffer
+            m_process.StandardInput.AutoFlush = true;
             m_process.BeginErrorReadLine();
             m_process.BeginOutputReadLine();
             m_childProcess = true;
@@ -322,6 +330,10 @@ namespace zomboi
             return true;
         }
 
+        /// <summary>
+        /// Everything the server writes goes to server.log, and on a first run we watch it go by for
+        /// the password prompt.
+        /// </summary>
         private void OnServerOutput(string? data)
         {
             if (data == null)
@@ -329,6 +341,10 @@ namespace zomboi
                 return;
             }
             m_logStream.WriteLine(data);
+            if (m_passwordPrompt != null && data.Contains("administrator password", StringComparison.OrdinalIgnoreCase))
+            {
+                m_passwordPrompt.TrySetResult();
+            }
         }
 
         public async Task Stop()
@@ -358,21 +374,75 @@ namespace zomboi
             m_childProcess = false;
         }
 
-        public async Task Create(string password)
+        /// <summary>
+        /// Run the server through its first time setup, which is a password prompt and then a long wait
+        /// while it generates the world and writes its config out.
+        /// </summary>
+        public async Task<bool> Create(string password)
         {
-            if (m_process == null)
+            if (IsRunning)
             {
-                Logger.Error("Process is null");
-                return;
+                Logger.Error("Can't create the server while it's running, stop it first");
+                return false;
             }
-            else
+            if (IsCreated)
             {
-                await Start();
+                Logger.Error($"The server has already been created. Delete {m_configPath} first if you " +
+                    "want to start it over from scratch.");
+                return false;
+            }
+
+            // Watch for the prompt before starting, so we can't miss it
+            m_passwordPrompt = new TaskCompletionSource();
+            try
+            {
+                if (!await Start() || m_process == null)
+                {
+                    return false;
+                }
+
+                // A prompt written without a newline after it never reaches us, so give it a fair
+                // chance to show up and then answer regardless
+                if (await Task.WhenAny(m_passwordPrompt.Task, Task.Delay(PasswordPromptTimeout)) != m_passwordPrompt.Task)
+                {
+                    Logger.Warn($"Didn't see the password prompt within {PasswordPromptTimeout.TotalMinutes:0} " +
+                        "minutes, answering it anyway");
+                }
                 await m_process.StandardInput.WriteLineAsync(password); // Set the password
                 await m_process.StandardInput.WriteLineAsync(password); // Confirm the password
-                await Stop();
-                Logger.Info("Server created");
             }
+            finally
+            {
+                m_passwordPrompt = null;
+            }
+
+            // The config only exists once it's finished booting, so stopping before then would leave
+            // a half made server. Give up early if it dies rather than waiting out the whole timeout.
+            await WaitFor(() => IsCreated || !IsRunning, ConfigWriteTimeout);
+            var created = IsCreated;
+            await Stop();
+            if (!created)
+            {
+                Logger.Error($"The server never wrote {m_configPath}, so it isn't set up. Check server.log " +
+                    "for what it said, and that the password meets whatever the server asked for.");
+                return false;
+            }
+            Logger.Info("Server created");
+            return true;
+        }
+
+        private static async Task<bool> WaitFor(Func<bool> condition, TimeSpan timeout)
+        {
+            var deadline = DateTime.Now + timeout;
+            while (DateTime.Now < deadline)
+            {
+                if (condition())
+                {
+                    return true;
+                }
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+            return condition();
         }
 
         public static void AddMod(Int64 modID, string modName)
