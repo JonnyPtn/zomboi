@@ -8,8 +8,12 @@ namespace zomboi
 {
     public class Zomboi
     {
+        private const string ConfigFile = "zomboi.ini";
+
         private readonly IConfiguration m_configuration;
         private readonly IServiceProvider m_serviceProvider;
+        // Ready fires again after every reconnect, and none of the setup wants doing twice
+        private int m_setUp = 0;
 
         private readonly DiscordSocketConfig m_socketConfig = new()
         {
@@ -35,7 +39,10 @@ namespace zomboi
         {
             m_configuration = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
-                .AddIniFile("zomboi.ini")
+                // Optional so a missing file is something we can explain rather than a stack trace
+                .AddIniFile(ConfigFile, optional: true)
+                // So the same settings can come from the environment instead, e.g. ZOMBOI_bot__token
+                .AddEnvironmentVariables("ZOMBOI_")
                 .Build();
 
             m_serviceProvider = new ServiceCollection()
@@ -61,28 +68,44 @@ namespace zomboi
 
             await m_serviceProvider.GetRequiredService<InteractionHandler>().InitializeAsync();
 
-            // Set the ZOMBOI_TOKEN environment variable to the discord bot token
-            var token = m_configuration["bot:token"];
+            if (!File.Exists(ConfigFile))
+            {
+                Logger.Warn($"No {ConfigFile} next to the bot. Copy {ConfigFile}.sample to {ConfigFile} " +
+                    "and fill it in, or set the settings in the environment instead.");
+            }
 
-            if (token == null)
+            var token = m_configuration["bot:token"];
+            if (string.IsNullOrWhiteSpace(token))
             {
-                Logger.Error("Token cannot be null");
+                Logger.Error($"No bot token, so there's nothing to log in with. Set 'token' in the [bot] " +
+                    $"section of {ConfigFile} to the token from the discord developer portal, or set the " +
+                    "ZOMBOI_bot__token environment variable.");
                 return;
             }
-            else if (token.Length == 0)
+            token = token.Trim();
+
+            try
             {
-                Logger.Error("Token is empty");
-                return;
+                // Discord.Net only warns about a token it can see is wrong, then spends forever
+                // failing to connect with it, so check it ourselves while we can still say why
+                TokenUtils.ValidateToken(TokenType.Bot, token);
             }
-            else if (token.Trim().Length == 0)
+            catch (Exception exception)
             {
-                Logger.Error("Token is only whitespace");
+                Logger.Error($"That doesn't look like a bot token: {exception.Message} Take it from the Bot " +
+                    "page of the discord developer portal - it isn't the application ID, the public key or " +
+                    "the OAuth2 client secret.");
                 return;
             }
 
             // Once we're logged in, set up our channels
             client.Ready += async () =>
             {
+                if (Interlocked.Exchange(ref m_setUp, 1) != 0)
+                {
+                    return;
+                }
+
                 try
                 {
                     m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"] ?? "");
@@ -109,8 +132,17 @@ namespace zomboi
                 }
             };
 
-            await client.LoginAsync(TokenType.Bot, token);
-            await client.StartAsync();
+            try
+            {
+                await client.LoginAsync(TokenType.Bot, token);
+                await client.StartAsync();
+            }
+            catch (Exception exception)
+            {
+                // Whatever else stops us connecting, a stack trace doesn't say what to fix
+                DiscordError.Log("log in to discord", exception);
+                return;
+            }
 
             await Task.Delay(Timeout.Infinite);
         }
