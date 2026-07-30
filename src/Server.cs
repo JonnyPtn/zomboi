@@ -13,13 +13,14 @@ namespace zomboi
         // The install layout the server ships with, as described at https://pzwiki.net/wiki/Dedicated_server
         private const string SteamAppFolder = "Project Zomboid Dedicated Server";
         private const string LocalFolder = "server";
+        private const string DefaultServerName = "servertest";
+        private const int DefaultPort = 16261;
         // The server asks for an administrator password on its first run, but not immediately
         private static readonly TimeSpan PasswordPromptTimeout = TimeSpan.FromMinutes(2);
         // And writes its config out as it finishes booting, which takes a while longer
         private static readonly TimeSpan ConfigWriteTimeout = TimeSpan.FromMinutes(5);
         // The user data folder is the same on every platform, it's only the install that moves around
         private static readonly string m_userDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid");
-        private static readonly string m_configPath = Path.Combine(m_userDataPath, "Server/servertest.ini");
 
         /// <summary>
         /// The launcher scripts the server ships with for this platform, most preferred first.
@@ -99,6 +100,18 @@ namespace zomboi
         }
 
         /// <summary>
+        /// What the server calls itself, which decides the name of its config file.
+        /// </summary>
+        public string ServerName
+        {
+            get
+            {
+                var configured = m_configuration["server:name"];
+                return string.IsNullOrWhiteSpace(configured) ? DefaultServerName : configured.Trim();
+            }
+        }
+
+        /// <summary>
         /// Every folder we look for an install in, most preferred first. Steam's own locations are
         /// included so a server installed through the steam client is found without any config.
         /// </summary>
@@ -120,8 +133,34 @@ namespace zomboi
         public string? StartPath { get { return SearchPaths.Select(FindLauncher).FirstOrDefault(path => path != null); } }
 
         public bool IsInstalled { get { return StartPath != null; } }
-        public static bool IsCreated { get { return File.Exists(m_configPath); } }
+        public string ConfigPath { get { return Path.Combine(m_userDataPath, "Server", $"{ServerName}.ini"); } }
+        public bool IsCreated { get { return File.Exists(ConfigPath); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(m_userDataPath, "Logs")); } }
+
+        /// <summary>
+        /// The port the server listens on, from its own config so one set up outside the bot is right too.
+        /// </summary>
+        public int Port
+        {
+            get
+            {
+                try
+                {
+                    if (IsCreated &&
+                        ConfigList.TryReadValue(File.ReadAllLines(ConfigPath), "DefaultPort", out var value) &&
+                        int.TryParse(value, out var port))
+                    {
+                        return port;
+                    }
+                }
+                catch (Exception exception)
+                {
+                    Logger.Warn($"Couldn't read the port from {ConfigPath}: {exception.Message}");
+                }
+                return DefaultPort;
+            }
+        }
+
         private readonly List<Player> m_players = new();
         // The log listeners add to this from thread pool threads while the commands read it
         private readonly object m_playersLock = new();
@@ -312,6 +351,12 @@ namespace zomboi
             m_process.StartInfo.RedirectStandardInput = true;
             m_process.StartInfo.RedirectStandardOutput = true;
             m_process.StartInfo.RedirectStandardError = true;
+            // Only pass it on when configured, so the default stays whatever the server would pick
+            if (!string.IsNullOrWhiteSpace(m_configuration["server:name"]))
+            {
+                m_process.StartInfo.ArgumentList.Add("-servername");
+                m_process.StartInfo.ArgumentList.Add(ServerName);
+            }
             m_process.OutputDataReceived += (sender, e) => OnServerOutput(e.Data);
             m_process.ErrorDataReceived += (sender, e) => OnServerOutput(e.Data);
             try
@@ -415,7 +460,7 @@ namespace zomboi
             }
             if (IsCreated)
             {
-                Logger.Error($"The server has already been created. Delete {m_configPath} first if you " +
+                Logger.Error($"{ServerName} has already been created. Delete {ConfigPath} first if you " +
                     "want to start it over from scratch.");
                 return false;
             }
@@ -451,7 +496,7 @@ namespace zomboi
             await Stop();
             if (!created)
             {
-                Logger.Error($"The server never wrote {m_configPath}, so it isn't set up. Check server.log " +
+                Logger.Error($"The server never wrote {ConfigPath}, so it isn't set up. Check server.log " +
                     "for what it said, and that the password meets whatever the server asked for.");
                 return false;
             }
@@ -488,11 +533,11 @@ namespace zomboi
             string[] lines;
             try
             {
-                lines = File.ReadAllLines(m_configPath);
+                lines = File.ReadAllLines(ConfigPath);
             }
             catch (Exception exception)
             {
-                Logger.Error($"Couldn't read {m_configPath}: {exception.Message}");
+                Logger.Error($"Couldn't read {ConfigPath}: {exception.Message}");
                 return false;
             }
 
@@ -500,7 +545,7 @@ namespace zomboi
             if (!ConfigList.TryAdd(lines, "WorkshopItems", modID.ToString(), out var idAdded) ||
                 !ConfigList.TryAdd(lines, "Mods", modName, out var nameAdded))
             {
-                Logger.Error($"{m_configPath} doesn't have both a WorkshopItems and a Mods line, so " +
+                Logger.Error($"{ConfigPath} doesn't have both a WorkshopItems and a Mods line, so " +
                     $"{modName} ({modID}) wasn't added");
                 return false;
             }
@@ -512,11 +557,11 @@ namespace zomboi
 
             try
             {
-                File.WriteAllLines(m_configPath, lines);
+                File.WriteAllLines(ConfigPath, lines);
             }
             catch (Exception exception)
             {
-                Logger.Error($"Couldn't write {m_configPath}: {exception.Message}");
+                Logger.Error($"Couldn't write {ConfigPath}: {exception.Message}");
                 return false;
             }
             Logger.Info($"Mod added: {modName} ({modID})");

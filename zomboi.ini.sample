@@ -14,3 +14,7 @@ skill channel =
 # Optional, where the server is installed. Leave blank to use a "server" folder next to the bot,
 # then steam's default location. See the readme.
 path =
+
+# Optional, what the server calls itself, which decides which config file in Zomboid/Server the bot
+# reads and writes. Leave blank for the game's default of "servertest".
+name =
