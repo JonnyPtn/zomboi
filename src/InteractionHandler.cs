@@ -32,7 +32,15 @@ public class InteractionHandler
 
     private async Task ReadyAsync()
     {
-        await m_service.RegisterCommandsGloballyAsync();
+        try
+        {
+            await m_service.RegisterCommandsGloballyAsync();
+        }
+        catch (Exception exception)
+        {
+            // Usually means the bot was invited without the applications.commands scope
+            DiscordError.Log("register the slash commands", exception);
+        }
     }
 
     private async Task HandleInteraction(SocketInteraction interaction)

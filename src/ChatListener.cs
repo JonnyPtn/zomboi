@@ -14,38 +14,39 @@ namespace zomboi
         {
         }
 
-        public void SetChannel(DiscordSocketClient client, string channelID)
+        public async Task SetChannel(DiscordSocketClient client, string channelID)
         {
             m_client = client;
-            if (channelID == null)
+            if (!ulong.TryParse(channelID, out var id))
             {
-                Logger.Error("Got a null channel ID");
+                Logger.Error($"'{channelID}' is not a valid chat channel ID, check the chat channel value in zomboi.ini");
                 return;
             }
-            var channel = client.GetChannel(ulong.Parse(channelID));
-            m_channel = channel as IMessageChannel;
+            m_channel = client.GetChannel(id) as IMessageChannel;
             if (m_channel == null)
             {
-                Logger.Error($"Channel ID {channelID} does not appear to be valid");
+                Logger.Error($"Unable to find chat channel {channelID}. Check the ID in zomboi.ini, and that the " +
+                    "bot has been invited to that server and has the View Channel permission on it.");
+                return;
             }
 
-            if (m_channel is IIntegrationChannel webhookChannel)
+            if (m_channel is not IIntegrationChannel webhookChannel)
+            {
+                Logger.Error($"Channel {channelID} doesn't support webhooks, so chat can't be mirrored to it");
+                return;
+            }
+
+            try
             {
                 // Possibly naive to assume we're the only webhook on the channel
-                var webhooks = webhookChannel.GetWebhooksAsync().Result;
-                if (webhooks.Count == 0)
-                {
-                    var webhook = webhookChannel.CreateWebhookAsync("zomboi").Result;
-                    m_webhookClient = new DiscordWebhookClient(webhook);
-                }
-                else
-                {
-                    m_webhookClient = new DiscordWebhookClient(webhooks.First());
-                }
+                var webhooks = await webhookChannel.GetWebhooksAsync();
+                var webhook = webhooks.FirstOrDefault() ?? await webhookChannel.CreateWebhookAsync("zomboi");
+                m_webhookClient = new DiscordWebhookClient(webhook);
             }
-            else
+            catch (Exception exception)
             {
-                Logger.Error($"Unable to create webhook on channel {channelID}");
+                // Reading and creating webhooks both need the Manage Webhooks permission
+                DiscordError.Log($"set up chat mirroring on channel {channelID}", exception);
             }
         }
 
