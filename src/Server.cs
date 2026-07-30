@@ -111,6 +111,20 @@ namespace zomboi
                 return false;
             }
 
+            if (!IsInstalled)
+            {
+                Logger.Error($"No server found at {Path.GetFullPath(m_serverPath)}. " +
+                    "Use the /server install command to download it from steam, then /server create to set it up.");
+                return false;
+            }
+
+            if (!File.Exists(StartPath))
+            {
+                Logger.Error($"Server folder {Path.GetFullPath(m_serverPath)} exists but {StartPath} is missing, " +
+                    "so the install didn't finish. Run /server install again.");
+                return false;
+            }
+
             m_process = new();
             m_process.StartInfo.FileName = StartPath;
             m_process.StartInfo.RedirectStandardInput = true;
@@ -118,20 +132,24 @@ namespace zomboi
             m_process.StartInfo.RedirectStandardError = true;
             m_process.OutputDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
             m_process.ErrorDataReceived += (sender, e) => m_logStream.WriteLine(e.Data);
-            if (m_process.Start())
+            try
             {
-                m_process.BeginErrorReadLine();
-                m_process.BeginOutputReadLine();
-                m_childProcess = true;
-                m_startTime = DateTime.Now;
-                Logger.Info("Server started");
+                if (!m_process.Start())
+                {
+                    Logger.Error($"Failed to start {StartPath}, no new process was created");
+                    return false;
+                }
             }
-            else
+            catch (Exception exception)
             {
-                var error = $"Failed to start server {m_process.StandardError}";
-                Logger.Error(error);
+                Logger.Error($"Failed to start {StartPath}: {exception.Message}");
                 return false;
             }
+            m_process.BeginErrorReadLine();
+            m_process.BeginOutputReadLine();
+            m_childProcess = true;
+            m_startTime = DateTime.Now;
+            Logger.Info("Server started");
             await m_client.SetGameAsync("Project Zomboid");
             await m_client.SetStatusAsync(UserStatus.Online);
             return true;

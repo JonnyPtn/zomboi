@@ -88,7 +88,15 @@ namespace zomboi
                     m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"] ?? "");
                     await m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(client, m_configuration["bot:chat channel"] ?? "");
                     m_serviceProvider.GetRequiredService<PerkListener>().SetChannel(client, m_configuration["bot:skill channel"] ?? "");
+                }
+                catch (Exception exception)
+                {
+                    // Anything escaping here just gets logged by discord as an unhandled handler exception
+                    DiscordError.Log("set up the bot's channels", exception);
+                }
 
+                try
+                {
                     var server = m_serviceProvider.GetRequiredService<Server>();
                     if (!server.Attach())
                     {
@@ -97,8 +105,7 @@ namespace zomboi
                 }
                 catch (Exception exception)
                 {
-                    // Anything escaping here just gets logged by discord as an unhandled handler exception
-                    DiscordError.Log("set up the bot's channels", exception);
+                    DiscordError.Log("start the game server", exception);
                 }
             };
 
