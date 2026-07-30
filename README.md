@@ -47,6 +47,8 @@ Bear in mind that channel specific permission overwrites can still deny these ev
 
 Copy the `zomboi.ini.sample` file and rename to `zomboi.ini` then populate with your desired values. Then run `dotnet run`
 
+Every setting can also come from the environment instead of the file, prefixed with `ZOMBOI_` and with `__` in place of the section separator - so the token can be set as `ZOMBOI_bot__token`. Handy for containers, and for keeping the token out of a file.
+
 ## Server installation
 
 If you don't have a server yet, run `/zomboi install` then `/zomboi create <password>`. The bot looks for an existing install in order:
@@ -56,3 +58,16 @@ If you don't have a server yet, run `/zomboi install` then `/zomboi create <pass
 3. Steam's [default library location](https://pzwiki.net/wiki/Dedicated_server) for your platform, e.g. `C:\Program Files (x86)\Steam\steamapps\common\Project Zomboid Dedicated Server`
 
 Set `path` if your server is somewhere else - that's also where `/zomboi install` will put it.
+
+`/zomboi create` runs the server through its first time setup, which means answering the password prompt and then waiting for it to generate the world and write its config out. That takes several minutes, and the bot waits for the config file to appear before reporting back, so don't take the delay as a hang.
+
+If your server doesn't use the game's default name of `servertest`, set `name` in the `[server]` section too - that's how the bot finds the config file it reads the port from and writes mods into, and it's passed on to the server when the bot starts it.
+
+## Development
+
+```
+dotnet build
+dotnet test tests/zomboi.tests/zomboi.tests.csproj
+```
+
+The tests cover the string handling that reads the server's logs and edits its config, which is the part most worth pinning down - the log formats aren't documented anywhere and a line in an unexpected shape used to be enough to take the bot down.
