@@ -1,3 +1,5 @@
+using Discord;
+using Discord.WebSocket;
 using zomboi;
 
 abstract public class LogFileListener : IDisposable
@@ -27,6 +29,32 @@ abstract public class LogFileListener : IDisposable
         m_watcher.Error += OnError;
     }
     abstract protected Task<bool> Parse(LogLine line);
+
+    /// <summary>
+    /// Resolve one of the channel IDs from zomboi.ini, saying what to check if we can't.
+    /// </summary>
+    /// <param name="description">What the channel is for, e.g. "chat", used in the error messages</param>
+    protected static IMessageChannel? FindChannel(DiscordSocketClient client, string channelID, string description)
+    {
+        if (string.IsNullOrWhiteSpace(channelID))
+        {
+            Logger.Warn($"No {description} channel set in zomboi.ini, so those notifications are off");
+            return null;
+        }
+        if (!ulong.TryParse(channelID.Trim(), out var id))
+        {
+            Logger.Error($"'{channelID}' is not a valid {description} channel ID, check the {description} " +
+                "channel value in zomboi.ini");
+            return null;
+        }
+        if (client.GetChannel(id) is not IMessageChannel channel)
+        {
+            Logger.Error($"Unable to find {description} channel {channelID}. Check the ID in zomboi.ini, and " +
+                "that the bot has been invited to that server and has the View Channel permission on it.");
+            return null;
+        }
+        return channel;
+    }
 
     private async Task Update()
     {

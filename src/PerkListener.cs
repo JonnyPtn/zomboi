@@ -16,17 +16,7 @@ namespace zomboi
 
         public void SetChannel(DiscordSocketClient client, string channelID)
         {
-            if (!ulong.TryParse(channelID, out var id))
-            {
-                Logger.Error($"'{channelID}' is not a valid skill channel ID, check the skill channel value in zomboi.ini");
-                return;
-            }
-            m_channel = client.GetChannel(id) as IMessageChannel;
-            if (m_channel == null)
-            {
-                Logger.Error($"Unable to find skill channel {channelID}. Check the ID in zomboi.ini, and that the " +
-                    "bot has been invited to that server and has the View Channel permission on it.");
-            }
+            m_channel = FindChannel(client, channelID, "skill");
         }
 
         override protected async Task<bool> Parse(LogLine line)
