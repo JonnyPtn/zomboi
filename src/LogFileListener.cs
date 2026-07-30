@@ -33,15 +33,23 @@ abstract public class LogFileListener
         string? line;
         while ((line = m_reader?.ReadLine()) != null)
         {
-            LogLine logLine = new(line);
-            if (logLine.TimeStamp >= m_last_update)
+            if (!LogLine.TryParse(line, out var logLine) || logLine.TimeStamp < m_last_update)
             {
-                m_last_update = logLine.TimeStamp;
+                continue;
+            }
+            m_last_update = logLine.TimeStamp;
 
+            try
+            {
                 if (!await Parse(logLine))
                 {
                     Logger.Info($"Unhandled Log: {logLine.Message}");
                 }
+            }
+            catch (Exception exception)
+            {
+                // A line we can't make sense of shouldn't be able to take the bot down with it
+                Logger.Error($"Failed to handle log line '{logLine.Message}': {exception.Message}");
             }
         }
     }
@@ -81,4 +89,4 @@ abstract public class LogFileListener
             Logger.Error("Unknown file watcher error");
         }
     }
-}
+}
