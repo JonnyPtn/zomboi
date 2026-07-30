@@ -1,17 +1,23 @@
-﻿using Discord;
+using Discord;
 using Discord.WebSocket;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace zomboi
 {
     public class PerkListener : LogFileListener
     {
-        private readonly IServiceProvider m_provider;
+        private readonly Server m_server;
         private IMessageChannel? m_channel;
 
-        public PerkListener(IServiceProvider provider) : base("*PerkLog.txt")
+        // The perk log lines are [number][name][position][perks], where perks is either the full
+        // "Perk=level,..." list or the words "Level Changed" followed by [perk][level]
+        private const int NameField = 1;
+        private const int PerksField = 3;
+        private const int ChangedPerkField = 4;
+        private const int ChangedLevelField = 5;
+
+        public PerkListener(Server server) : base("*PerkLog.txt")
         {
-            m_provider = provider;
+            m_server = server;
         }
 
         public void SetChannel(DiscordSocketClient client, string channelID)
@@ -21,77 +27,101 @@ namespace zomboi
 
         override protected async Task<bool> Parse(LogLine line)
         {
-            if (m_channel != null)
+            if (m_channel == null)
             {
-                // Deconstruct the message based on the brackets
-                var closeBracket = line.Message.IndexOf("]");
-                var openBracket = line.Message.IndexOf("[");
-                var someNumber = line.Message.Substring(openBracket + 1, closeBracket - 1);
-
-                openBracket = line.Message.IndexOf("[", closeBracket);
-                closeBracket = line.Message.IndexOf("]", openBracket);
-                var name = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
-
-                var player = m_provider.GetRequiredService<Server>().GetOrCreatePlayer(name, line.TimeStamp);
-
-                openBracket = line.Message.IndexOf("[", closeBracket);
-                closeBracket = line.Message.IndexOf("]", openBracket);
-                var position = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
-
-                openBracket = line.Message.IndexOf("[", closeBracket);
-                closeBracket = line.Message.IndexOf("]", openBracket);
-                var perks = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
-
-                if (perks.Contains('='))
-                {
-                    // Should be a list of key=value perks?!
-                    var perkPairs = perks.Split(",", StringSplitOptions.TrimEntries);
-                    var perkValues = perkPairs.Select(x =>
-                    {
-                        var split = x.Split("=");
-                        return new Perk(split[0], int.Parse(split[1]));
-                    }).ToArray();
-
-                    // Check against the player's perks to see if they've levelled up
-                    foreach (var perk in perkValues)
-                    {
-                        var existing = player.Perks.Find(x => x.Name == perk.Name);
-                        if (existing == null)
-                        {
-                            player.Perks.Add(perk);
-                        }
-                        else if (perk.Level > existing.Level)
-                        {
-                            await m_channel.SendMessageAsync($":chart_with_upwards_trend: {player.Name} has achieved level {perk.Level} in {perk.Name}");
-                            existing.Level = perk.Level;
-                        }
-                    }
-                    return true;
-                }
-                else if (perks.Contains("Level Changed"))
-                {
-                    openBracket = line.Message.IndexOf("[", closeBracket);
-                    closeBracket = line.Message.IndexOf("]", openBracket);
-                    var perkName = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
-
-                    openBracket = line.Message.IndexOf("[", closeBracket);
-                    closeBracket = line.Message.IndexOf("]", openBracket);
-                    var level = line.Message.Substring(openBracket + 1, closeBracket - openBracket - 1);
-
-                    var current = player.Perks.Find(x => x.Name == perkName);
-                    if (current == null)
-                    {
-                        Logger.Warn($"Unexpected skill for player: {perkName}");
-                    }
-                    else
-                    {
-                        await m_channel.SendMessageAsync($":chart_with_upwards_trend: {player.Name} has achieved level {level} in {perkName}");
-                        current.Level = int.Parse(level);
-                        return true;
-                    }
-                }
+                return false;
             }
+
+            var fields = LogFields.Bracketed(line.Message);
+            if (fields.Count <= PerksField)
+            {
+                return false;
+            }
+            var name = fields[NameField];
+            var perks = fields[PerksField];
+
+            if (perks.Contains('='))
+            {
+                var levels = ParsePerkList(perks);
+                if (levels.Count == 0)
+                {
+                    return false;
+                }
+
+                // Check against the player's perks to see if they've levelled up
+                var player = m_server.GetOrCreatePlayer(name, line.TimeStamp);
+                foreach (var perk in levels)
+                {
+                    var existing = player.Perks.Find(x => x.Name == perk.Name);
+                    if (existing == null)
+                    {
+                        player.Perks.Add(perk);
+                    }
+                    else if (perk.Level > existing.Level)
+                    {
+                        existing.Level = perk.Level;
+                        await m_channel.SendMessageAsync(
+                            $":chart_with_upwards_trend: {player.Name} has achieved level {perk.Level} in {perk.Name}");
+                    }
+                }
+                return true;
+            }
+
+            if (perks.Contains("Level Changed"))
+            {
+                if (fields.Count <= ChangedLevelField)
+                {
+                    Logger.Warn($"Level change with no skill and level in it: {line.Message}");
+                    return false;
+                }
+                var perkName = fields[ChangedPerkField];
+                if (!int.TryParse(fields[ChangedLevelField], out var level))
+                {
+                    Logger.Warn($"'{fields[ChangedLevelField]}' is not a level for {perkName}");
+                    return false;
+                }
+
+                var player = m_server.GetOrCreatePlayer(name, line.TimeStamp);
+                var current = player.Perks.Find(x => x.Name == perkName);
+                if (current == null)
+                {
+                    // No full skill list yet, so we can't tell a level up from a level we hadn't recorded
+                    Logger.Warn($"Unexpected skill for player: {perkName}");
+                    player.Perks.Add(new Perk(perkName, level));
+                }
+                else if (level > current.Level)
+                {
+                    current.Level = level;
+                    await m_channel.SendMessageAsync(
+                        $":chart_with_upwards_trend: {player.Name} has achieved level {level} in {perkName}");
+                }
+                else
+                {
+                    current.Level = level;
+                }
+                return true;
+            }
+
             return false;
+        }
+
+        /// <summary>
+        /// A "Perk=level,Perk=level" list, skipping any entry that isn't in that shape.
+        /// </summary>
+        private static List<Perk> ParsePerkList(string perks)
+        {
+            var levels = new List<Perk>();
+            foreach (var pair in perks.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+            {
+                var split = pair.Split('=');
+                if (split.Length != 2 || !int.TryParse(split[1], out var level))
+                {
+                    Logger.Warn($"Unexpected perk entry: {pair}");
+                    continue;
+                }
+                levels.Add(new Perk(split[0].Trim(), level));
+            }
+            return levels;
         }
     }
 }
