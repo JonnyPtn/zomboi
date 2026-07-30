@@ -28,6 +28,9 @@ public class InteractionHandler
 
         // Process the InteractionCreated payloads to execute Interactions commands
         m_client.InteractionCreated += HandleInteraction;
+
+        // ExecuteCommandAsync reports success whatever happens, so this is where failures show up
+        m_service.InteractionExecuted += InteractionExecuted;
     }
 
     private async Task ReadyAsync()
@@ -50,27 +53,59 @@ public class InteractionHandler
             // Create an execution context that matches the generic type parameter of your InteractionModuleBase<T> modules.
             var context = new SocketInteractionContext(m_client, interaction);
 
-            // Execute the incoming command.
-            var result = await m_service.ExecuteCommandAsync(context, m_provider);
-
-            // Due to async nature of InteractionFramework, the result here may always be success.
-            // That's why we also need to handle the InteractionExecuted event.
-            if (!result.IsSuccess)
-                switch (result.Error)
-                {
-                    case InteractionCommandError.UnmetPrecondition:
-                        // implement
-                        break;
-                    default:
-                        break;
-                }
+            await m_service.ExecuteCommandAsync(context, m_provider);
         }
-        catch
+        catch (Exception exception)
         {
-            // If Slash Command execution fails it is most likely that the original interaction acknowledgement will persist. It is a good idea to delete the original
-            // response, or at least let the user know that something went wrong during the command execution.
+            DiscordError.Log($"run {Describe(interaction)}", exception);
+
+            // A failed command leaves its acknowledgement sitting there as though it had worked
             if (interaction.Type is InteractionType.ApplicationCommand)
-                await interaction.GetOriginalResponseAsync().ContinueWith(async (msg) => await msg.Result.DeleteAsync());
+            {
+                try
+                {
+                    var response = await interaction.GetOriginalResponseAsync();
+                    await response.DeleteAsync();
+                }
+                catch (Exception cleanup)
+                {
+                    Logger.Error($"Couldn't clear the response to {Describe(interaction)}: {cleanup.Message}");
+                }
+            }
         }
     }
+
+    /// <summary>
+    /// Say what went wrong, in the bot's output and back to whoever ran the command.
+    /// </summary>
+    private static async Task InteractionExecuted(ICommandInfo command, IInteractionContext context, IResult result)
+    {
+        if (result.IsSuccess)
+        {
+            return;
+        }
+        Logger.Error($"Failed to run /{command.Name}: {result.Error} {result.ErrorReason}");
+
+        var message = result.Error == InteractionCommandError.UnmetPrecondition
+            ? result.ErrorReason
+            : $"Something went wrong running /{command.Name}, check the bot's output for why";
+        try
+        {
+            if (context.Interaction.HasResponded)
+            {
+                await context.Interaction.FollowupAsync(message, ephemeral: true);
+            }
+            else
+            {
+                await context.Interaction.RespondAsync(message, ephemeral: true);
+            }
+        }
+        catch (Exception exception)
+        {
+            DiscordError.Log($"report the /{command.Name} failure", exception);
+        }
+    }
+
+    private static string Describe(SocketInteraction interaction)
+        => interaction is SocketSlashCommand command ? $"/{command.Data.Name}" : interaction.Type.ToString();
 }
