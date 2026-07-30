@@ -10,6 +10,7 @@ abstract public class LogFileListener : IDisposable
     private readonly SemaphoreSlim m_lock = new(1, 1);
     private StreamReader? m_reader;
     private DateTime m_last_update = DateTime.UnixEpoch;
+
     public LogFileListener(string filePattern)
     {
         Directory.CreateDirectory(Server.LogFolderPath);
@@ -28,6 +29,7 @@ abstract public class LogFileListener : IDisposable
         m_watcher.Created += OnCreated;
         m_watcher.Error += OnError;
     }
+
     abstract protected Task<bool> Parse(LogLine line);
 
     /// <summary>
@@ -89,6 +91,7 @@ abstract public class LogFileListener : IDisposable
             m_lock.Release();
         }
     }
+
     async void OnChanged(object sender, FileSystemEventArgs e)
     {
         try
@@ -135,6 +138,7 @@ abstract public class LogFileListener : IDisposable
             m_lock.Release();
         }
     }
+
     void OnError(object sender, ErrorEventArgs e)
     {
         var exception = e.GetException();
@@ -155,4 +159,4 @@ abstract public class LogFileListener : IDisposable
         m_lock.Dispose();
         GC.SuppressFinalize(this);
     }
-}
+}
