@@ -1,8 +1,11 @@
 using zomboi;
 
-abstract public class LogFileListener
+abstract public class LogFileListener : IDisposable
 {
     private readonly FileSystemWatcher m_watcher;
+    // The watcher raises its events on thread pool threads, and one write can raise several, so the
+    // handlers would otherwise read from the same reader at once
+    private readonly SemaphoreSlim m_lock = new(1, 1);
     private StreamReader? m_reader;
     private DateTime m_last_update = DateTime.UnixEpoch;
     public LogFileListener(string filePattern)
@@ -10,14 +13,11 @@ abstract public class LogFileListener
         Directory.CreateDirectory(Server.LogFolderPath);
         m_watcher = new(Server.LogFolderPath)
         {
+            // Appends show up as size and last write changes, which is all we need. Watching the
+            // rest just multiplies the events per write.
             NotifyFilter =
             NotifyFilters.FileName |
-            NotifyFilters.DirectoryName |
             NotifyFilters.LastWrite |
-            NotifyFilters.Security |
-            NotifyFilters.CreationTime |
-            NotifyFilters.LastAccess |
-            NotifyFilters.Attributes |
             NotifyFilters.Size,
             Filter = filePattern,
             EnableRaisingEvents = true
@@ -30,52 +30,82 @@ abstract public class LogFileListener
 
     private async Task Update()
     {
-        string? line;
-        while ((line = m_reader?.ReadLine()) != null)
+        await m_lock.WaitAsync();
+        try
         {
-            if (!LogLine.TryParse(line, out var logLine) || logLine.TimeStamp < m_last_update)
+            string? line;
+            while ((line = m_reader?.ReadLine()) != null)
             {
-                continue;
-            }
-            m_last_update = logLine.TimeStamp;
-
-            try
-            {
-                if (!await Parse(logLine))
+                if (!LogLine.TryParse(line, out var logLine) || logLine.TimeStamp < m_last_update)
                 {
-                    Logger.Info($"Unhandled Log: {logLine.Message}");
+                    continue;
+                }
+                m_last_update = logLine.TimeStamp;
+
+                try
+                {
+                    if (!await Parse(logLine))
+                    {
+                        Logger.Info($"Unhandled Log: {logLine.Message}");
+                    }
+                }
+                catch (Exception exception)
+                {
+                    // A line we can't make sense of shouldn't be able to take the bot down with it
+                    Logger.Error($"Failed to handle log line '{logLine.Message}': {exception.Message}");
                 }
             }
-            catch (Exception exception)
-            {
-                // A line we can't make sense of shouldn't be able to take the bot down with it
-                Logger.Error($"Failed to handle log line '{logLine.Message}': {exception.Message}");
-            }
+        }
+        finally
+        {
+            m_lock.Release();
         }
     }
     async void OnChanged(object sender, FileSystemEventArgs e)
     {
-        if (e.Name == null)
+        try
         {
-            Logger.Error("Received a file change event without a file name");
-            return;
+            if (m_reader == null)
+            {
+                await OpenReader(e.FullPath);
+            }
+            await Update();
         }
-
-        if (m_reader == null)
+        catch (Exception exception)
         {
-            OnCreated(sender, e);
+            // Nothing awaits an event handler, so anything escaping here would be unhandled
+            Logger.Error($"Failed to read {e.FullPath}: {exception.Message}");
         }
-
-        await Update();
     }
-    void OnCreated(object sender, FileSystemEventArgs e)
+
+    async void OnCreated(object sender, FileSystemEventArgs e)
     {
-        var fileStream = new FileStream(e.FullPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite)
+        try
         {
-            Position = 0
-        };
-        m_reader = new StreamReader(fileStream);
-        Logger.Info($"Watching new log file: {e.FullPath}");
+            await OpenReader(e.FullPath);
+        }
+        catch (Exception exception)
+        {
+            Logger.Error($"Failed to open {e.FullPath}: {exception.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Start reading a log file from the beginning, closing whatever we were reading before it.
+    /// </summary>
+    private async Task OpenReader(string path)
+    {
+        await m_lock.WaitAsync();
+        try
+        {
+            m_reader?.Dispose();
+            m_reader = new StreamReader(new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite));
+            Logger.Info($"Watching new log file: {path}");
+        }
+        finally
+        {
+            m_lock.Release();
+        }
     }
     void OnError(object sender, ErrorEventArgs e)
     {
@@ -88,5 +118,13 @@ abstract public class LogFileListener
         {
             Logger.Error("Unknown file watcher error");
         }
+    }
+
+    public void Dispose()
+    {
+        m_watcher.Dispose();
+        m_reader?.Dispose();
+        m_lock.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
