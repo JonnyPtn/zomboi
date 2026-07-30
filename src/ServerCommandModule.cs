@@ -112,19 +112,41 @@ namespace zomboi
             {
                 process.StartInfo.FileName = "steamcmd/steamcmd";
             }
-            process.StartInfo.Arguments = "+runscript ../update_server.txt";
+            // Install into the same folder the bot looks in, so a path set in zomboi.ini is honoured
+            string[] arguments = {
+                "+@ShutdownOnFailedCommand", "1", // Set to 0 if updating multiple servers at once
+                "+@NoPromptForPassword", "1",
+                "+force_install_dir", m_server.InstallPath,
+                "+login", "anonymous",
+                "+app_update", "380870", "validate",
+                "+quit"
+            };
+            foreach (var argument in arguments)
+            {
+                process.StartInfo.ArgumentList.Add(argument);
+            }
             process.StartInfo.WorkingDirectory = Environment.CurrentDirectory;
             process.Start();
             await process.WaitForExitAsync();
+
+            // Steamcmd reports its own failures by exiting without leaving us anything to run
+            var startPath = Server.FindLauncher(m_server.InstallPath);
+            if (startPath == null)
+            {
+                Logger.Error($"Steamcmd finished but there's no launcher in {m_server.InstallPath}");
+                await FollowupAsync("Server install failed, check the bot's output for what steam said", ephemeral: true);
+                return;
+            }
+
             await FollowupAsync("Server installed", ephemeral: true);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 // We don't want the batch file to wait for input, so remove any PAUSE
                 var pause = "PAUSE";
-                var file = File.ReadAllText(Server.StartPath);
+                var file = File.ReadAllText(startPath);
                 file = file.Replace(pause, "");
-                File.WriteAllText(Server.StartPath, file);
+                File.WriteAllText(startPath, file);
             }
         }
 
