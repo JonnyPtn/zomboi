@@ -22,9 +22,6 @@
     <None Update="zomboi.ini.sample">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-		<None Update="update_server.txt">
-			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-		</None>
   </ItemGroup>
 
 </Project>

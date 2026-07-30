@@ -8,4 +8,9 @@ users channel =
 # Chat mirroring (one way from game to discord)
 chat channel = 
 # Skill notifications
-skill channel = 
+skill channel =
+
+[server]
+# Optional, where the server is installed. Leave blank to use a "server" folder next to the bot,
+# then steam's default location. See the readme.
+path =
