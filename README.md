@@ -77,6 +77,36 @@ From the folder you unpacked it into:
 
 The bot prints an invite link on its first run, since it isn't in a discord server yet. Follow that link to invite it to your server
 
+## Running as a service on linux
+
+Put this in `/etc/systemd/system/zomboi.service`:
+
+```ini
+[Unit]
+Description=Zomboi
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+ExecStart=/opt/zomboi/zomboi
+WorkingDirectory=/opt/zomboi
+User=pzuser
+Restart=on-failure
+KillMode=process
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Point the paths at wherever you unpacked it and `User` at an account that owns that folder, then:
+
+```
+sudo systemctl enable --now zomboi
+journalctl -u zomboi -f
+```
+
+The bot logs to the console, so the journal is where its output ends up.
+
 ## Server installation
 
 If you don't have a server yet, run `/zomboi install` then `/zomboi create <password>`. The bot looks for an existing install in order:
