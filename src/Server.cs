@@ -307,30 +307,72 @@ namespace zomboi
             }
         }
 
-        public async Task<bool> Attach()
+        /// <summary>
+        /// What a running server is called in the process list. On windows the launcher runs the jre
+        /// the server ships with rather than an executable of its own, so what we're looking for
+        /// there is a plain jvm - <see cref="IsOurServer"/> is what tells it apart from any other
+        /// java on the box.
+        /// </summary>
+        private static string[] ServerProcessNames
         {
-            // On windows I'm not yet sure what process name will find the server
-            // As "ProjectZomboid64" is the actual game client so causes issues
-            // when debugging with a local server which I currently only do on windows
-            // So for now just don't try to attach on windows
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            get
             {
-                Logger.Info("Windows attach not implemented");
+                return RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    ? new[] { "java" }
+                    : new[] { "ProjectZomboid64" };
+            }
+        }
+
+        /// <summary>
+        /// Whether that process is the server out of the install we'd start ourselves, rather than
+        /// an unrelated jvm or a second server running from somewhere else.
+        /// </summary>
+        private bool IsOurServer(Process process)
+        {
+            var startPath = StartPath;
+            if (startPath == null)
+            {
                 return false;
             }
-            var existing = Process.GetProcessesByName("ProjectZomboid64");
+
+            // With the separator on the end, so a sibling folder that merely starts with the same
+            // name isn't taken for ours
+            var folder = Path.GetFullPath(Path.GetDirectoryName(startPath) ?? string.Empty);
+            if (!folder.EndsWith(Path.DirectorySeparatorChar))
+            {
+                folder += Path.DirectorySeparatorChar;
+            }
+
+            try
+            {
+                var executable = process.MainModule?.FileName;
+                return executable != null && executable.StartsWith(folder, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (Exception exception)
+            {
+                // A process we can't look inside isn't one we could drive either way
+                Logger.Warn($"Couldn't tell what process {process.Id} is running: {exception.Message}");
+                return false;
+            }
+        }
+
+        public async Task<bool> Attach()
+        {
+            var existing = ServerProcessNames.SelectMany(Process.GetProcessesByName).ToArray();
+            var ours = existing.Where(IsOurServer).ToArray();
             var attached = false;
             try
             {
-                if (existing.Length > 1)
+                if (ours.Length > 1)
                 {
-                    Logger.Error($"Found {existing.Length} existing server processes");
+                    Logger.Error($"Found {ours.Length} existing server processes");
                 }
-                else if (existing.Length == 1)
+                else if (ours.Length == 1)
                 {
-                    m_process = existing[0];
+                    m_process = ours[0];
                     m_childProcess = false;
-                    m_startTime = DateTime.Now;
+                    // The server was up before we were, so its own start is the honest one to report
+                    m_startTime = m_process.StartTime;
                     Logger.Info("Attached to server process");
                     attached = true;
                 }
