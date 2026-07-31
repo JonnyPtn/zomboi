@@ -194,6 +194,7 @@ namespace zomboi
         private readonly DiscordSocketClient m_client;
         private readonly IConfiguration m_configuration;
         private DateTime m_startTime = DateTime.Now;
+        private DateTime m_notifyFrom = DateTime.Now;
         private IMessageChannel? m_channel;
 
         public Server(DiscordSocketClient client, IConfiguration configuration)
@@ -310,6 +311,16 @@ namespace zomboi
         }
 
         /// <summary>
+        /// Whether something the logs say happened then is news, or history from before we were
+        /// watching. We read them from the top, so attaching to a server that's been up for hours reads
+        /// hours of joins, deaths and level ups that nobody wants notifying about now.
+        /// </summary>
+        public bool IsNews(DateTime when)
+        {
+            return when > m_notifyFrom;
+        }
+
+        /// <summary>
         /// Record a player connecting, telling anyone listening if they weren't already online.
         /// </summary>
         public async Task<Player> PlayerConnected(string playerName, DateTime seenTime, Vector2? position)
@@ -318,8 +329,8 @@ namespace zomboi
             bool joined;
             lock (m_playersLock)
             {
-                // If it was before the server started then it's history, not someone joining now
-                joined = !player.Online && seenTime > m_startTime;
+                // If it was before we were watching then it's history, not someone joining now
+                joined = !player.Online && IsNews(seenTime);
                 player.Online = true;
                 if (position != null)
                 {
@@ -348,9 +359,9 @@ namespace zomboi
         /// </summary>
         public async Task PlayerDied(Player player, DateTime diedTime)
         {
-            // If it was before the server started then it's a character they lost in an earlier
-            // session, which the log still tells us about but nobody wants announced now
-            if (diedTime <= m_startTime || OnPlayerDied == null)
+            // If it was before we were watching then it's a character they lost while we weren't
+            // looking, which the log still tells us about but nobody wants announced now
+            if (!IsNews(diedTime) || OnPlayerDied == null)
             {
                 return;
             }
@@ -365,7 +376,8 @@ namespace zomboi
         /// <summary>
         /// Record a player disconnecting.
         /// </summary>
-        /// <returns>Whether they were online, so we don't announce the same player leaving twice</returns>
+        /// <returns>Whether they've just left, so we don't announce the same player leaving twice or
+        /// one who left before we were watching at all</returns>
         public bool PlayerDisconnected(string playerName, DateTime seenTime, Vector2? position)
         {
             var player = GetOrCreatePlayer(playerName, seenTime);
@@ -385,7 +397,7 @@ namespace zomboi
                     return false;
                 }
                 player.Online = false;
-                return true;
+                return IsNews(seenTime);
             }
         }
 
@@ -455,6 +467,8 @@ namespace zomboi
                     m_childProcess = false;
                     // The server was up before we were, so its own start is the honest one to report
                     m_startTime = m_process.StartTime;
+                    // Its logs go back that far too, but only what happens from now on is news
+                    m_notifyFrom = DateTime.Now;
                     Logger.Info("Attached to server process");
                     attached = true;
                 }
@@ -551,6 +565,8 @@ namespace zomboi
             m_process.BeginOutputReadLine();
             m_childProcess = true;
             m_startTime = DateTime.Now;
+            // The logs it appends to can still hold an earlier session, so not all of them are news
+            m_notifyFrom = m_startTime;
             Logger.Info("Server started");
             await m_client.SetGameAsync("Project Zomboid");
             await m_client.SetStatusAsync(UserStatus.Online);

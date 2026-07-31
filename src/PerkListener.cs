@@ -35,12 +35,13 @@ namespace zomboi
         }
 
         /// <summary>
-        /// Post a level up, if there's a channel to post it to. What the log tells us about a player is
-        /// worth keeping either way, so an unset channel skips the notification rather than the line.
+        /// Post a level up, if there's a channel to post it to and it happened while we were watching.
+        /// The levels an earlier session recorded are what tell us the next one is a level up at all,
+        /// so this drops the notification rather than the line.
         /// </summary>
-        private async Task Announce(string playerName, string perkName, int level)
+        private async Task Announce(DateTime when, string playerName, string perkName, int level)
         {
-            if (m_channel == null)
+            if (m_channel == null || !m_server.IsNews(when))
             {
                 return;
             }
@@ -99,7 +100,7 @@ namespace zomboi
                     else if (perk.Level > existing.Level)
                     {
                         existing.Level = perk.Level;
-                        await Announce(player.Name, perk.Name, perk.Level);
+                        await Announce(line.TimeStamp, player.Name, perk.Name, perk.Level);
                     }
                 }
                 return true;
@@ -129,7 +130,7 @@ namespace zomboi
                 else if (level > current.Level)
                 {
                     current.Level = level;
-                    await Announce(player.Name, perkName, level);
+                    await Announce(line.TimeStamp, player.Name, perkName, level);
                 }
                 else
                 {

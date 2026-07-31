@@ -9,9 +9,10 @@ namespace zomboi
         private DiscordWebhookClient? m_webhookClient;
         private IMessageChannel? m_channel;
         private DiscordSocketClient? m_client;
-        private DateTime m_lastChatTime = DateTime.Now;
-        public ChatListener() : base("*chat.txt")
+        private readonly Server m_server;
+        public ChatListener(Server server) : base("*chat.txt")
         {
+            m_server = server;
         }
 
         public async Task SetChannel(DiscordSocketClient client, string channelID)
@@ -50,11 +51,10 @@ namespace zomboi
                 // SetChannel already said why, so don't repeat it for every line the server writes
                 return false;
             }
-            if (line.TimeStamp <= m_lastChatTime)
+            if (!m_server.IsNews(line.TimeStamp))
             {
-                return false;
+                return true;
             }
-            m_lastChatTime = line.TimeStamp;
 
             // We only want to mirror general/global messages
             if (!line.Message.Contains("Got message") || !line.Message.Contains("chat=General"))
