@@ -38,9 +38,12 @@ Each of these posts to its own channel, set by ID in `zomboi.ini`. Leave one bla
 | Notification | Channel | What you get |
 | --- | --- | --- |
 | Joins and leaves | `users channel` | A line whenever someone connects or disconnects |
+| Deaths | `users channel` | A line when a player's character dies |
 | Level ups | `skill channel` | A line when a player reaches a new level in a skill |
 | Chat | `chat channel` | Global in-game chat, posted through a webhook so each message shows the speaker's name and, if their in-game name matches a discord user, that user's avatar |
 | Server up and down | `server channel` | A line when the server starts or stops |
+
+Where possible notifications will include the location and hours survived
 
 Chat is mirrored game -> discord only, not the other way round yet.
 

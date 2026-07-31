@@ -231,6 +231,9 @@ namespace zomboi
         public delegate Task PlayerJoined(Player player);
         public event PlayerJoined? OnPlayerJoined;
 
+        public delegate Task PlayerDeath(Player player);
+        public event PlayerDeath? OnPlayerDied;
+
         // Both the output and error handlers write to this from their own threads
         private readonly TextWriter m_logStream = TextWriter.Synchronized(
             new StreamWriter(new FileStream("server.log", FileMode.Create, FileAccess.Write, FileShare.ReadWrite))
@@ -337,6 +340,26 @@ namespace zomboi
                 }
             }
             return player;
+        }
+
+        /// <summary>
+        /// Record a player's character dying, telling anyone listening about it. Dying doesn't take them
+        /// offline - they're still connected, picking a new character - so nothing else changes.
+        /// </summary>
+        public async Task PlayerDied(Player player, DateTime diedTime)
+        {
+            // If it was before the server started then it's a character they lost in an earlier
+            // session, which the log still tells us about but nobody wants announced now
+            if (diedTime <= m_startTime || OnPlayerDied == null)
+            {
+                return;
+            }
+
+            // Invoke the handlers by hand so each one is awaited, rather than just the last
+            foreach (PlayerDeath handler in OnPlayerDied.GetInvocationList())
+            {
+                await handler(player);
+            }
         }
 
         /// <summary>
