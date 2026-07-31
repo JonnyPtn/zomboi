@@ -129,6 +129,57 @@ namespace zomboi
             }
         }
 
+        /// <summary>
+        /// Runs the unpacked steamcmd through to its exit, and reports whether we managed to run it
+        /// at all. Steamcmd's own failures aren't covered by that, as it exits cleanly either way.
+        /// </summary>
+        private static async Task<bool> RunSteamCMD(params string[] arguments)
+        {
+            Process process = new();
+            process.StartInfo.FileName = SteamCMD.Executable;
+            foreach (var argument in arguments)
+            {
+                process.StartInfo.ArgumentList.Add(argument);
+            }
+            process.StartInfo.WorkingDirectory = Environment.CurrentDirectory;
+            try
+            {
+                process.Start();
+                await process.WaitForExitAsync();
+            }
+            catch (Exception exception)
+            {
+                Logger.Error($"Failed to run {SteamCMD.Executable}: {exception.Message}");
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Fills in steamcmd's cache of what steam has published, which it needs before it can work
+        /// out which depots the server is made of.
+        /// </summary>
+        private static async Task WarmSteamCMD()
+        {
+            // A freshly unpacked steamcmd self updates on its first run and fetches that cache as it
+            // goes. Asking for the app in the same run races it, and steam answers with "Missing
+            // configuration" instead of waiting, so give the cache a run of its own first.
+            var cachePath = Path.Combine("steamcmd", "appcache", "appinfo.vdf");
+            if (File.Exists(cachePath))
+            {
+                return;
+            }
+
+            Logger.Info("Priming steamcmd, which only happens on a first install");
+            if (!await RunSteamCMD("+@ShutdownOnFailedCommand", "1", "+@NoPromptForPassword", "1",
+                "+login", "anonymous", "+app_info_update", "1", "+quit"))
+            {
+                // Not fatal by itself - the install may still find what it needs, and it reports
+                // its own failure if it doesn't
+                Logger.Warn("Couldn't prime steamcmd, so a first install may fail");
+            }
+        }
+
         [DefaultMemberPermissions(GuildPermission.Administrator)]
         [SlashCommand("install", "Install (or update) the server from steam")]
         public async Task Install()
@@ -145,30 +196,17 @@ namespace zomboi
                 return;
             }
 
-            Process process = new();
-            process.StartInfo.FileName = SteamCMD.Executable;
+            await WarmSteamCMD();
+
             // Install into the same folder the bot looks in, so a path set in zomboi.ini is honoured
-            string[] arguments = {
+            if (!await RunSteamCMD(
                 "+@ShutdownOnFailedCommand", "1", // Set to 0 if updating multiple servers at once
                 "+@NoPromptForPassword", "1",
                 "+force_install_dir", m_server.InstallPath,
                 "+login", "anonymous",
                 "+app_update", SteamAppID, "validate",
-                "+quit"
-            };
-            foreach (var argument in arguments)
+                "+quit"))
             {
-                process.StartInfo.ArgumentList.Add(argument);
-            }
-            process.StartInfo.WorkingDirectory = Environment.CurrentDirectory;
-            try
-            {
-                process.Start();
-                await process.WaitForExitAsync();
-            }
-            catch (Exception exception)
-            {
-                Logger.Error($"Failed to run {SteamCMD.Executable}: {exception.Message}");
                 await Report("Couldn't run steamcmd, check the bot's output for why");
                 return;
             }
