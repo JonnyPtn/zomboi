@@ -1,22 +1,47 @@
 # Zomboi
 
-A discord bot for dedicated project zomboid servers. Currently under heavy development, but any testing/feedback is welcome.
-
-This is also an exercise for me to learn c# better so if you are experienced and wondering wtf is going on with this code, please share some knowledge with me :)
+Zomboi runs on the same machine as a dedicated server and does two jobs. It drives the server - installing, creating, starting and stopping it on command - and it tails the logs the server writes so it can report what's happening in game back to discord, without anyone needing access to the box it runs on.
 
 ## Commands
 
-The bot makes use of slash commands for most things, so if you start typing `/` discord will show the commands available.
+Everything is a slash command, so start typing `/` and discord will list them. Replies are only visible to whoever ran the command. Anything that changes the server is limited to administrators.
 
-Features include:
-- Server management
-- Mod management
-- Player info
+### `/zomboi` - the server
+
+| Command | Admin only | What it does |
+| --- | --- | --- |
+| `/zomboi status` | | Up time, the address and port to connect on, and how many players are online |
+| `/zomboi start` | Yes | Starts the server, or attaches to one that's already running |
+| `/zomboi stop` | Yes | Shuts the server down |
+| `/zomboi install` | Yes | Fetches steamcmd and installs the server with it, or updates an existing install |
+| `/zomboi create <password>` | Yes | Runs a fresh install through its first time setup with that admin password. Several minutes, see [Server installation](#server-installation) |
+
+### `/mod` - mods
+
+| Command | Admin only | What it does |
+| --- | --- | --- |
+| `/mod add <id>` | Yes | Adds the workshop item with that ID - the number on the end of its workshop URL - to the server's mod and workshop lists. The bot looks the name up on steam, so a bad ID is caught rather than written out. Needs a restart to take effect if the server is running |
+
+### `/player` - players
+
+| Command | Admin only | What it does |
+| --- | --- | --- |
+| `/player list` | | Who's currently connected, with when they were last seen and where they were |
+| `/player skills <name>` | | Every skill the bot has seen that player level, and what level they're at |
+
+Player info comes from the logs, so it covers anyone the bot has watched play rather than everyone who has ever been on the server.
 
 ## Notifications
-- Players joining or leaving
-- Players levelling up
-- Chat mirrored from Global in-game chat (Only game -> discord mirroring, not the other way round yet)
+
+Each of these posts to its own channel, set by ID in `zomboi.ini`. Leave one blank and that notification is simply skipped, so you can have chat mirroring without the level ups, or any other mix.
+
+| Notification | Channel | What you get |
+| --- | --- | --- |
+| Joins and leaves | `users channel` | A line whenever someone connects or disconnects |
+| Level ups | `skill channel` | A line when a player reaches a new level in a skill |
+| Chat | `chat channel` | Global in-game chat, posted through a webhook so each message shows the speaker's name and, if their in-game name matches a discord user, that user's avatar |
+
+Chat is mirrored game -> discord only, not the other way round yet.
 
 ## Discord setup
 
