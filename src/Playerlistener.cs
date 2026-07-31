@@ -21,7 +21,13 @@ namespace zomboi
                 Logger.Warn("Player notification channel not set");
                 return;
             }
-            await m_channel.SendMessageAsync($":wave: {player.Name} has joined");
+            // Where they came in is worth a look, so link it on the map when the log gave us one
+            var where = player.HasPosition ? $" {Map.Link(player.Position)}" : string.Empty;
+            // How long they've lasted comes from the perk log, which writes it just after the line that
+            // got us here, so it's worth holding the notification back for
+            var hours = await m_server.WaitForHoursSurvived(player);
+            var survived = hours == null ? string.Empty : $", {Survival.Describe(hours.Value)} survived";
+            await m_channel.SendMessageAsync($":wave: {player.Name} has joined{where}{survived}");
         }
 
         public void SetChannel(DiscordSocketClient client, string channelID)
@@ -57,7 +63,9 @@ namespace zomboi
                     return false;
                 }
 
-                if (m_server.PlayerDisconnected(name, line.TimeStamp))
+                // The disconnect line carries a position too, which is the last one we'll get for them
+                Vector2? leftAt = LogFields.TryReadPosition(line.Message, out var lastSeen) ? lastSeen : null;
+                if (m_server.PlayerDisconnected(name, line.TimeStamp, leftAt))
                 {
                     await m_channel.SendMessageAsync($":person_running: {name} has left");
                 }

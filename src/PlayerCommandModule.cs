@@ -27,10 +27,26 @@ namespace zomboi
 
                 foreach (var player in players)
                 {
-                    builder.AddField(player.Name, $"Last seen: {player.LastSeen.ToShortDateString()} {player.LastSeen.ToShortTimeString()} at {player.Position}");
+                    builder.AddField(player.Name, Describe(player));
                 }
                 await RespondAsync(embed: builder.Build(), ephemeral: true);
             }
+        }
+
+        /// <summary>
+        /// Where and when we last saw a player, and how long they've lasted, leaving out whichever of
+        /// those the logs haven't told us yet.
+        /// </summary>
+        private static string Describe(Player player)
+        {
+            var where = player.HasPosition ? $" {Map.Link(player.Position)}" : string.Empty;
+            var description = $"Last seen: {player.LastSeen.ToShortDateString()} {player.LastSeen.ToShortTimeString()}{where}";
+            if (player.HoursSurvived != null)
+            {
+                // Only the perk log carries this, so it's as of their last skill event rather than now
+                description += $"\nSurvived: {Survival.Describe(player.HoursSurvived.Value)}";
+            }
+            return description;
         }
 
         [SlashCommand("skills", "Show skills for a player")]

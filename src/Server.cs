@@ -19,6 +19,12 @@ namespace zomboi
         private static readonly TimeSpan PasswordPromptTimeout = TimeSpan.FromMinutes(2);
         // And writes its sandbox settings out as it finishes that setup, which takes a while longer
         private static readonly TimeSpan SetupTimeout = TimeSpan.FromMinutes(5);
+        // A connecting player's survival time lands in the perk log a fraction of a second after the
+        // player log says they're in, so it's worth waiting for. Long enough to cover a server busy
+        // enough to be slow about it, short enough that a join notification isn't left hanging if the
+        // perk log never mentions them at all.
+        private static readonly TimeSpan SurvivalTimeWait = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan SurvivalTimePoll = TimeSpan.FromMilliseconds(100);
         // The user data folder is the same on every platform, it's only the install that moves around
         private static readonly string m_userDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid");
 
@@ -265,6 +271,42 @@ namespace zomboi
         }
 
         /// <summary>
+        /// Record where a player is and how long their character has lasted, which is what the perk log
+        /// reports on every line it writes about them. Not the same as them connecting - it says
+        /// nothing about whether they're online - so nobody is told about it.
+        /// </summary>
+        public Player PlayerSeen(string playerName, DateTime seenTime, Vector2? position, int? hoursSurvived)
+        {
+            var player = GetOrCreatePlayer(playerName, seenTime);
+            lock (m_playersLock)
+            {
+                if (position != null)
+                {
+                    player.Position = position.Value;
+                }
+                if (hoursSurvived != null)
+                {
+                    player.HoursSurvived = hoursSurvived;
+                }
+            }
+            return player;
+        }
+
+        /// <summary>
+        /// How long a player's character has survived, giving the perk log a moment to say if we don't
+        /// know yet. Only that log carries the number and it writes it just after the player log says
+        /// they're connected, so anything reporting on a join has to wait for it rather than read it
+        /// straight away. Null if it never turns up.
+        /// </summary>
+        public async Task<int?> WaitForHoursSurvived(Player player)
+        {
+            // A player we've seen before this session has a survival time already, and it can't have
+            // moved on while they were away, so there's nothing to wait for
+            await WaitFor(() => player.HoursSurvived != null, SurvivalTimeWait, SurvivalTimePoll);
+            return player.HoursSurvived;
+        }
+
+        /// <summary>
         /// Record a player connecting, telling anyone listening if they weren't already online.
         /// </summary>
         public async Task<Player> PlayerConnected(string playerName, DateTime seenTime, Vector2? position)
@@ -301,7 +343,7 @@ namespace zomboi
         /// Record a player disconnecting.
         /// </summary>
         /// <returns>Whether they were online, so we don't announce the same player leaving twice</returns>
-        public bool PlayerDisconnected(string playerName, DateTime seenTime)
+        public bool PlayerDisconnected(string playerName, DateTime seenTime, Vector2? position)
         {
             var player = GetOrCreatePlayer(playerName, seenTime);
             lock (m_playersLock)
@@ -311,6 +353,10 @@ namespace zomboi
                     return false;
                 }
                 player.LastSeen = seenTime;
+                if (position != null)
+                {
+                    player.Position = position.Value;
+                }
                 if (!player.Online)
                 {
                     return false;
@@ -624,7 +670,7 @@ namespace zomboi
             return true;
         }
 
-        private static async Task<bool> WaitFor(Func<bool> condition, TimeSpan timeout)
+        private static async Task<bool> WaitFor(Func<bool> condition, TimeSpan timeout, TimeSpan? interval = null)
         {
             var deadline = DateTime.Now + timeout;
             while (DateTime.Now < deadline)
@@ -633,7 +679,7 @@ namespace zomboi
                 {
                     return true;
                 }
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(interval ?? TimeSpan.FromSeconds(1));
             }
             return condition();
         }

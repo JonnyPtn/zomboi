@@ -8,12 +8,19 @@ namespace zomboi
         private readonly Server m_server;
         private IMessageChannel? m_channel;
 
-        // The perk log lines are [number][name][position][perks], where perks is either the full
-        // "Perk=level,..." list or the words "Level Changed" followed by [perk][level]
+        // The perk log lines are [steam id][name][position][what happened], where the last field is
+        // either the full "Perk=level,..." list, the words "Level Changed" followed by [perk][level],
+        // or one of the plain events below. Most of them then end with [Hours Survived: n].
         private const int NameField = 1;
-        private const int PerksField = 3;
+        private const int PositionField = 2;
+        private const int EventField = 3;
         private const int ChangedPerkField = 4;
         private const int ChangedLevelField = 5;
+
+        // Written as a player's character comes into the world, either at the start of a session or
+        // after they've died and made a new one
+        private const string LoginEvent = "Login";
+        private const string CreatedPlayerEvent = "Created Player";
 
         public PerkListener(Server server) : base("*PerkLog.txt")
         {
@@ -25,31 +32,53 @@ namespace zomboi
             m_channel = Channels.Find(client, channelID, "skill");
         }
 
-        override protected async Task<bool> Parse(LogLine line)
+        /// <summary>
+        /// Post a level up, if there's a channel to post it to. What the log tells us about a player is
+        /// worth keeping either way, so an unset channel skips the notification rather than the line.
+        /// </summary>
+        private async Task Announce(string playerName, string perkName, int level)
         {
             if (m_channel == null)
             {
-                return false;
+                return;
             }
+            await m_channel.SendMessageAsync(
+                $":chart_with_upwards_trend: {playerName} has achieved level {level} in {perkName}");
+        }
 
+        override protected async Task<bool> Parse(LogLine line)
+        {
             var fields = LogFields.Bracketed(line.Message);
-            if (fields.Count <= PerksField)
+            if (fields.Count <= EventField)
             {
                 return false;
             }
             var name = fields[NameField];
-            var perks = fields[PerksField];
+            var happened = fields[EventField];
 
-            if (perks.Contains('='))
+            // Whatever the line turns out to be about, it says where the player is and usually how long
+            // their character has survived, so take both off every one of them
+            var player = m_server.PlayerSeen(name, line.TimeStamp,
+                LogFields.TryReadCoordinates(fields[PositionField], out var position) ? position : null,
+                LogFields.TryReadHoursSurvived(line.Message, out var hours) ? hours : null);
+
+            // A character coming into the world is nothing to post about - the join notification comes
+            // from the player log, and beats this line to it - but the survival time above is only in
+            // the logs at all because of these lines
+            if (happened == LoginEvent || happened.StartsWith(CreatedPlayerEvent, StringComparison.Ordinal))
             {
-                var levels = ParsePerkList(perks);
+                return true;
+            }
+
+            if (happened.Contains('='))
+            {
+                var levels = ParsePerkList(happened);
                 if (levels.Count == 0)
                 {
                     return false;
                 }
 
                 // Check against the player's perks to see if they've levelled up
-                var player = m_server.GetOrCreatePlayer(name, line.TimeStamp);
                 foreach (var perk in levels)
                 {
                     var existing = player.Perks.Find(x => x.Name == perk.Name);
@@ -60,14 +89,13 @@ namespace zomboi
                     else if (perk.Level > existing.Level)
                     {
                         existing.Level = perk.Level;
-                        await m_channel.SendMessageAsync(
-                            $":chart_with_upwards_trend: {player.Name} has achieved level {perk.Level} in {perk.Name}");
+                        await Announce(player.Name, perk.Name, perk.Level);
                     }
                 }
                 return true;
             }
 
-            if (perks.Contains("Level Changed"))
+            if (happened.Contains("Level Changed"))
             {
                 if (fields.Count <= ChangedLevelField)
                 {
@@ -81,7 +109,6 @@ namespace zomboi
                     return false;
                 }
 
-                var player = m_server.GetOrCreatePlayer(name, line.TimeStamp);
                 var current = player.Perks.Find(x => x.Name == perkName);
                 if (current == null)
                 {
@@ -92,8 +119,7 @@ namespace zomboi
                 else if (level > current.Level)
                 {
                     current.Level = level;
-                    await m_channel.SendMessageAsync(
-                        $":chart_with_upwards_trend: {player.Name} has achieved level {level} in {perkName}");
+                    await Announce(player.Name, perkName, level);
                 }
                 else
                 {
