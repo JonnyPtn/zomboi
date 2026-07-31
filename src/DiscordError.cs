@@ -1,5 +1,6 @@
 using Discord.Net;
 using System.Net;
+using System.Net.Sockets;
 
 namespace zomboi
 {
@@ -34,6 +35,21 @@ namespace zomboi
                     Logger.Error($"Discord rejected our token when trying to {what}. " +
                         "Check the token in zomboi.ini matches the one in the developer portal.");
                     break;
+                // A failed lookup of discord.com surfaces as "No such host is known", which reads like
+                // discord is missing rather than us having no working network
+                case Exception error when Cause(error) is SocketException
+                {
+                    SocketErrorCode: SocketError.HostNotFound or SocketError.TryAgain or SocketError.NoData
+                }:
+                    Logger.Error($"Failed to {what}: this machine can't look up discord.com, so its " +
+                        "internet connection or DNS isn't working. Check the network, and that a proxy " +
+                        "or firewall isn't blocking discord.com on port 443.");
+                    break;
+                case Exception error when Cause(error) is SocketException socket:
+                    Logger.Error($"Failed to {what}: couldn't reach discord.com ({socket.SocketErrorCode}). " +
+                        "Check this machine's internet connection, and that a firewall or proxy isn't " +
+                        "blocking outbound connections on port 443.");
+                    break;
                 case Exception error:
                     Logger.Error($"Failed to {what}: {error.Message}");
                     break;
@@ -47,5 +63,12 @@ namespace zomboi
             => exception is AggregateException { InnerExceptions.Count: 1 } aggregate
                 ? Unwrap(aggregate.InnerExceptions[0])
                 : exception;
+
+        /// <summary>
+        /// The exception at the bottom of the chain, which is where the network errors worth explaining
+        /// sit - HttpRequestException only repeats their message on the way out
+        /// </summary>
+        private static Exception Cause(Exception exception)
+            => exception.InnerException is { } inner ? Cause(inner) : exception;
     }
 }

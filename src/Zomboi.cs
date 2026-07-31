@@ -25,8 +25,17 @@ namespace zomboi
         {
             switch (msg.Severity)
             {
+                case LogSeverity.Critical:
                 case LogSeverity.Error:
-                    Logger.Error(msg.ToString());
+                    if (msg.Exception is null)
+                    {
+                        Logger.Error(msg.ToString());
+                        break;
+                    }
+                    // Discord.Net logs its own failures as a bare stack trace, which says what broke
+                    // but not what to do about it
+                    var where = string.IsNullOrWhiteSpace(msg.Message) ? msg.Source : $"{msg.Source}: {msg.Message}";
+                    DiscordError.Log($"talk to discord ({where})", msg.Exception);
                     break;
                 default:
                     Logger.Info(msg.ToString());
