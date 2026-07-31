@@ -111,6 +111,8 @@ namespace zomboi
                     m_serviceProvider.GetRequiredService<Playerlistener>().SetChannel(client, m_configuration["bot:users channel"] ?? "");
                     await m_serviceProvider.GetRequiredService<ChatListener>().SetChannel(client, m_configuration["bot:chat channel"] ?? "");
                     m_serviceProvider.GetRequiredService<PerkListener>().SetChannel(client, m_configuration["bot:skill channel"] ?? "");
+                    // Before the server starts below, so the notification for that start isn't lost
+                    m_serviceProvider.GetRequiredService<Server>().SetChannel(client, m_configuration["bot:server channel"] ?? "");
                 }
                 catch (Exception exception)
                 {
@@ -121,7 +123,7 @@ namespace zomboi
                 try
                 {
                     var server = m_serviceProvider.GetRequiredService<Server>();
-                    if (!server.Attach())
+                    if (!await server.Attach())
                     {
                         await server.Start();
                     }

@@ -22,7 +22,7 @@ namespace zomboi
 
         public void SetChannel(DiscordSocketClient client, string channelID)
         {
-            m_channel = FindChannel(client, channelID, "skill");
+            m_channel = Channels.Find(client, channelID, "skill");
         }
 
         override protected async Task<bool> Parse(LogLine line)
