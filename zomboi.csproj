@@ -10,7 +10,6 @@
   <ItemGroup>
     <PackageReference Include="Discord.Net" Version="3.14.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Ini" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
   </ItemGroup>
@@ -25,6 +24,9 @@
   <ItemGroup>
     <None Update="zomboi.ini">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <!-- Handy to have next to a local build, but it holds a bot token, and a publish is something
+           you hand to other people -->
+      <CopyToPublishDirectory>Never</CopyToPublishDirectory>
     </None>
     <None Update="zomboi.ini.sample">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

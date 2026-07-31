@@ -9,7 +9,9 @@ namespace zomboi
     public class Zomboi
     {
         private const string ConfigFile = "zomboi.ini";
+        private const string ConfigArgument = "--config";
 
+        private readonly string m_configFile;
         private readonly IConfiguration m_configuration;
         private readonly IServiceProvider m_serviceProvider;
         // Ready fires again after every reconnect, and none of the setup wants doing twice
@@ -44,14 +46,13 @@ namespace zomboi
             return Task.CompletedTask;
         }
 
-        public Zomboi()
+        public Zomboi(string configFile)
         {
+            m_configFile = configFile;
             m_configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
+                .SetBasePath(Path.GetDirectoryName(configFile) ?? Directory.GetCurrentDirectory())
                 // Optional so a missing file is something we can explain rather than a stack trace
-                .AddIniFile(ConfigFile, optional: true)
-                // So the same settings can come from the environment instead, e.g. ZOMBOI_bot__token
-                .AddEnvironmentVariables("ZOMBOI_")
+                .AddIniFile(Path.GetFileName(configFile), optional: true)
                 .Build();
 
             m_serviceProvider = new ServiceCollection()
@@ -66,8 +67,106 @@ namespace zomboi
                 .AddSingleton<PerkListener>()
                 .BuildServiceProvider();
         }
-        static void Main(string[] args)
-            => new Zomboi().RunAsync().GetAwaiter().GetResult();
+
+        private static void Usage()
+        {
+            Logger.Info(string.Join(Environment.NewLine, new[]
+            {
+                $"Usage: zomboi [{ConfigArgument} <path>]",
+                "",
+                $"  {ConfigArgument} <path>   The settings file to read, and the folder the bot works in.",
+                $"                    Defaults to a {ConfigFile} in the current folder, then one next",
+                "                    to the bot itself."
+            }));
+        }
+
+        /// <summary>
+        /// The value given to <see cref="ConfigArgument"/>, in either the "--config path" or
+        /// "--config=path" spelling, or null if it wasn't passed at all.
+        /// </summary>
+        private static string? ConfigOption(string[] args)
+        {
+            for (var index = 0; index < args.Length; index++)
+            {
+                if (args[index].StartsWith($"{ConfigArgument}=", StringComparison.Ordinal))
+                {
+                    return args[index][(ConfigArgument.Length + 1)..];
+                }
+                if (args[index] == ConfigArgument)
+                {
+                    return index + 1 < args.Length ? args[index + 1] : "";
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// The settings file to read, which also settles the folder the bot runs from. In order:
+        /// whatever <see cref="ConfigArgument"/> points at, an existing file in the current folder,
+        /// then one next to the executable - so a bot started as a service, from a shortcut, or by any
+        /// other route that doesn't set a sensible working directory still finds its settings. Falls
+        /// back to the current folder, which gives a first run somewhere to be told to put one.
+        /// </summary>
+        /// <exception cref="ArgumentException">The path given on the command line is unusable.</exception>
+        private static string FindConfig(string[] args)
+        {
+            var option = ConfigOption(args);
+            if (option != null)
+            {
+                if (string.IsNullOrWhiteSpace(option))
+                {
+                    throw new ArgumentException($"{ConfigArgument} needs the path to a settings file after it.");
+                }
+                // Asked for a specific file, so a missing one is a mistake worth stopping for rather
+                // than something to quietly fall back from
+                var path = Path.GetFullPath(option.Trim());
+                if (!File.Exists(path))
+                {
+                    throw new ArgumentException($"No settings file at {path}.");
+                }
+                return path;
+            }
+
+            var candidates = new[]
+            {
+                Path.GetFullPath(ConfigFile),
+                Path.Combine(AppContext.BaseDirectory, ConfigFile)
+            };
+            return candidates.FirstOrDefault(File.Exists) ?? candidates[0];
+        }
+
+        static int Main(string[] args)
+        {
+            if (args.Any(argument => argument is "--help" or "-h" or "/?"))
+            {
+                Usage();
+                return 0;
+            }
+
+            string configFile;
+            try
+            {
+                configFile = FindConfig(args);
+            }
+            catch (ArgumentException exception)
+            {
+                Logger.Error(exception.Message);
+                Usage();
+                return 1;
+            }
+
+            // The rest of the bot reaches for steamcmd, the server folder and its own log by relative
+            // path, so move to where the settings live once here rather than rebasing each of them.
+            // Without this, running from anywhere but the install folder scatters those around.
+            var home = Path.GetDirectoryName(configFile);
+            if (!string.IsNullOrEmpty(home) && home != Directory.GetCurrentDirectory())
+            {
+                Directory.SetCurrentDirectory(home);
+            }
+
+            new Zomboi(configFile).RunAsync().GetAwaiter().GetResult();
+            return 0;
+        }
 
         public async Task RunAsync()
         {
@@ -77,18 +176,17 @@ namespace zomboi
 
             await m_serviceProvider.GetRequiredService<InteractionHandler>().InitializeAsync();
 
-            if (!File.Exists(ConfigFile))
+            if (!File.Exists(m_configFile))
             {
-                Logger.Warn($"No {ConfigFile} next to the bot. Copy {ConfigFile}.sample to {ConfigFile} " +
-                    "and fill it in, or set the settings in the environment instead.");
+                Logger.Warn($"No settings file at {m_configFile}. Copy {ConfigFile}.sample to {ConfigFile} " +
+                    "and fill it in.");
             }
 
             var token = m_configuration["bot:token"];
             if (string.IsNullOrWhiteSpace(token))
             {
                 Logger.Error($"No bot token, so there's nothing to log in with. Set 'token' in the [bot] " +
-                    $"section of {ConfigFile} to the token from the discord developer portal, or set the " +
-                    "ZOMBOI_bot__token environment variable.");
+                    $"section of {m_configFile} to the token from the discord developer portal.");
                 return;
             }
             token = token.Trim();
@@ -113,6 +211,17 @@ namespace zomboi
                 if (Interlocked.Exchange(ref m_setUp, 1) != 0)
                 {
                     return;
+                }
+
+                // A bot that isn't in a server can't do anything, and every channel lookup below is
+                // about to fail for that one reason, so say so first and hand over the link that
+                // fixes it. Its own user ID is the application ID the invite needs, which saves
+                // anyone going back to the portal to look it up.
+                if (client.Guilds.Count == 0)
+                {
+                    Logger.Warn($"{client.CurrentUser.Username} isn't in any discord server yet. Invite it " +
+                        $"with this link, which already asks for the permissions it needs:" +
+                        $"{Environment.NewLine}{Invite.Url(client.CurrentUser.Id)}");
                 }
 
                 try

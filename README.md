@@ -47,36 +47,35 @@ Where possible notifications will include the location and hours survived
 
 Chat is mirrored game -> discord only, not the other way round yet.
 
-## Discord setup
+## Getting started
 
-Create an application in the [Discord developer portal](https://discord.com/developers/applications) and add a bot to it, then grab the bot token for `zomboi.ini`.
+### 1. Get the bot
 
-### Permissions
+Download the build for your platform from the [releases page](../../releases) and unpack it on the machine that runs, or is going to run, the server.
 
-Invite the bot with both the `bot` and `applications.commands` scopes - the second one is what allows it to register the slash commands. The permissions it needs are:
+To build from source instead, install the [.NET 8 SDK](https://dotnet.microsoft.com/download) and run `dotnet run` in a clone of this repo.
 
-| Permission | What it's needed for |
+### 2. Make a discord bot
+
+Create an application in the [Discord developer portal](https://discord.com/developers/applications) and add a bot to it, then copy the token from the Bot page.
+
+### 3. Fill in the settings
+
+Copy `zomboi.ini.sample` to `zomboi.ini` and put the token in it.
+
+The same file is where you say which channels the notifications go to. Right click a channel in discord and copy a link to it - the ID is the number on the end, as in `https://discord.com/channels/<server_id>/<channel_id>` - and put that against the matching setting in the `[bot]` section. Leave any of them blank and that notification is simply skipped, see [Notifications](#notifications).
+
+### 4. Run it
+
+From the folder you unpacked it into:
+
+| Platform | Command |
 | --- | --- |
-| View Channel | Finding the channels you list in `zomboi.ini` |
-| Send Messages | Posting the join/leave and level up notifications |
-| Embed Links | The player and server info commands reply with embeds |
-| Manage Webhooks | Chat mirroring posts through a webhook so in-game names and avatars show up |
+| Windows | `.\zomboi.exe`, or just double click it |
+| Linux and macOS | `./zomboi` |
+| From source | `dotnet run` in the clone |
 
-The easiest way to get all of that is to use this invite link, replacing `<YOUR_APP_ID>` with your application ID:
-
-```
-https://discord.com/api/oauth2/authorize?client_id=<YOUR_APP_ID>&permissions=536890368&scope=bot%20applications.commands
-```
-
-If you'd rather build the link yourself in the portal's OAuth2 URL generator, tick the four permissions above.
-
-Bear in mind that channel specific permission overwrites can still deny these even when the bot's role allows them, so if a notification channel is private make sure the bot's role is granted access to it.
-
-### Quick start
-
-Copy the `zomboi.ini.sample` file and rename to `zomboi.ini` then populate with your desired values. Then run `dotnet run`
-
-Every setting can also come from the environment instead of the file, prefixed with `ZOMBOI_` and with `__` in place of the section separator - so the token can be set as `ZOMBOI_bot__token`. Handy for containers, and for keeping the token out of a file.
+The bot prints an invite link on its first run, since it isn't in a discord server yet. Follow that link to invite it to your server
 
 ## Server installation
 
@@ -100,3 +99,4 @@ dotnet test tests/zomboi.tests/zomboi.tests.csproj
 ```
 
 The tests cover the string handling that reads the server's logs and edits its config, which is the part most worth pinning down - the log formats aren't documented anywhere and a line in an unexpected shape used to be enough to take the bot down.
+

@@ -1,0 +1,86 @@
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        rid: [win-x64, linux-x64, osx-arm64]
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Work out the version
+      id: version
+      run: |
+        if [ "${{ github.ref_type }}" = "tag" ]; then
+          echo "number=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        else
+          echo "number=0.0.0" >> "$GITHUB_OUTPUT"
+        fi
+
+    - name: Publish
+      run: >
+        dotnet publish zomboi.csproj
+        --configuration Release
+        --runtime ${{ matrix.rid }}
+        --self-contained true
+        -p:PublishSingleFile=true
+        -p:IncludeNativeLibrariesForSelfExtract=true
+        -p:EnableCompressionInSingleFile=true
+        -p:DebugType=none
+        -p:Version=${{ steps.version.outputs.number }}
+        --output publish/${{ matrix.rid }}
+
+    - name: Add the readme
+      run: cp README.md publish/${{ matrix.rid }}/
+
+    - name: Package
+      id: package
+      run: |
+        NAME="zomboi-${{ steps.version.outputs.number }}-${{ matrix.rid }}"
+        if [ "${{ matrix.rid }}" = "win-x64" ]; then
+          (cd publish/${{ matrix.rid }} && zip -r "../../$NAME.zip" .)
+          echo "file=$NAME.zip" >> "$GITHUB_OUTPUT"
+        else
+          # Publishing sets this itself, but only when the filesystem it publishes onto can hold it
+          chmod +x publish/${{ matrix.rid }}/zomboi
+          tar -czf "$NAME.tar.gz" -C publish/${{ matrix.rid }} .
+          echo "file=$NAME.tar.gz" >> "$GITHUB_OUTPUT"
+        fi
+
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.rid }}
+        path: ${{ steps.package.outputs.file }}
+        if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag'
+
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+        merge-multiple: true
+
+    - name: Release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        GH_REPO: ${{ github.repository }}
+      run: gh release create "$GITHUB_REF_NAME" artifacts/* --generate-notes --title "$GITHUB_REF_NAME"
