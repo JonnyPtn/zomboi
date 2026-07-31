@@ -17,8 +17,8 @@ namespace zomboi
         private const int DefaultPort = 16261;
         // The server asks for an administrator password on its first run, but not immediately
         private static readonly TimeSpan PasswordPromptTimeout = TimeSpan.FromMinutes(2);
-        // And writes its config out as it finishes booting, which takes a while longer
-        private static readonly TimeSpan ConfigWriteTimeout = TimeSpan.FromMinutes(5);
+        // And writes its sandbox settings out as it finishes that setup, which takes a while longer
+        private static readonly TimeSpan SetupTimeout = TimeSpan.FromMinutes(5);
         // The user data folder is the same on every platform, it's only the install that moves around
         private static readonly string m_userDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Zomboid");
 
@@ -134,7 +134,20 @@ namespace zomboi
 
         public bool IsInstalled { get { return StartPath != null; } }
         public string ConfigPath { get { return Path.Combine(m_userDataPath, "Server", $"{ServerName}.ini"); } }
-        public bool IsCreated { get { return File.Exists(ConfigPath); } }
+
+        /// <summary>
+        /// The sandbox settings, which the server only writes once its first time setup has run all
+        /// the way through. The config lands early - before it has even asked for an administrator
+        /// password - so the config can't tell us the setup finished, and this can.
+        /// </summary>
+        public string SandboxPath { get { return Path.Combine(m_userDataPath, "Server", $"{ServerName}_SandboxVars.lua"); } }
+
+        /// <summary>
+        /// Whether there's a config to read the server's settings out of. Written early in a first
+        /// run, so see <see cref="IsCreated"/> for whether that run actually got to the end.
+        /// </summary>
+        public bool HasConfig { get { return File.Exists(ConfigPath); } }
+        public bool IsCreated { get { return File.Exists(SandboxPath); } }
         public static string LogFolderPath { get { return Path.GetFullPath(Path.Combine(m_userDataPath, "Logs")); } }
 
         /// <summary>
@@ -146,7 +159,7 @@ namespace zomboi
             {
                 try
                 {
-                    if (IsCreated &&
+                    if (HasConfig &&
                         ConfigList.TryReadValue(File.ReadAllLines(ConfigPath), "DefaultPort", out var value) &&
                         int.TryParse(value, out var port))
                     {
@@ -394,6 +407,15 @@ namespace zomboi
 
         public Task<bool> Start()
         {
+            // Create runs the server through its first setup by starting it itself, and hasn't
+            // written the config by that point, so this guard belongs out here rather than in
+            // Start(announce). A missing install is left to that, which explains itself better.
+            if (IsInstalled && !IsCreated)
+            {
+                Logger.Error($"{ServerName} hasn't been set up yet, so it would sit waiting for an " +
+                    "administrator password instead of coming up. Use /zomboi create <password> first.");
+                return Task.FromResult(false);
+            }
             return Start(announce: true);
         }
 
@@ -557,8 +579,8 @@ namespace zomboi
             }
             if (IsCreated)
             {
-                Logger.Error($"{ServerName} has already been created. Delete {ConfigPath} first if you " +
-                    "want to start it over from scratch.");
+                Logger.Error($"{ServerName} has already been created. Delete {ConfigPath} and " +
+                    $"{SandboxPath} first if you want to start it over from scratch.");
                 return false;
             }
 
@@ -586,14 +608,15 @@ namespace zomboi
                 m_passwordPrompt = null;
             }
 
-            // The config only exists once it's finished booting, so stopping before then would leave
-            // a half made server. Give up early if it dies rather than waiting out the whole timeout.
-            await WaitFor(() => IsCreated || !IsRunning, ConfigWriteTimeout);
+            // The sandbox settings only turn up once it's run all the way through its setup, so
+            // stopping before then would leave a half made server. Give up early if it dies rather
+            // than waiting out the whole timeout.
+            await WaitFor(() => IsCreated || !IsRunning, SetupTimeout);
             var created = IsCreated;
             await Stop(announce: false);
             if (!created)
             {
-                Logger.Error($"The server never wrote {ConfigPath}, so it isn't set up. Check server.log " +
+                Logger.Error($"The server never wrote {SandboxPath}, so it isn't set up. Check server.log " +
                     "for what it said, and that the password meets whatever the server asked for.");
                 return false;
             }
@@ -621,7 +644,7 @@ namespace zomboi
         /// </summary>
         public bool AddMod(Int64 modID, string modName)
         {
-            if (!IsCreated)
+            if (!HasConfig)
             {
                 Logger.Error("Can't add mod before server is created");
                 return false;
