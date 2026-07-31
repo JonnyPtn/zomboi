@@ -17,7 +17,7 @@ namespace zomboi
         public async Task SetChannel(DiscordSocketClient client, string channelID)
         {
             m_client = client;
-            m_channel = FindChannel(client, channelID, "chat");
+            m_channel = Channels.Find(client, channelID, "chat");
             if (m_channel == null)
             {
                 return;

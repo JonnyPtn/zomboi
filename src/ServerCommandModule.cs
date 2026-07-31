@@ -26,7 +26,7 @@ namespace zomboi
         public async Task Start()
         {
             await RespondAsync("Starting server, please wait", ephemeral: true);
-            if (m_server.Attach())
+            if (await m_server.Attach())
             {
                 await FollowupAsync("Attached to existing server process", ephemeral: true);
             }

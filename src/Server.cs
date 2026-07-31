@@ -175,11 +175,38 @@ namespace zomboi
         private readonly DiscordSocketClient m_client;
         private readonly IConfiguration m_configuration;
         private DateTime m_startTime = DateTime.Now;
+        private IMessageChannel? m_channel;
 
         public Server(DiscordSocketClient client, IConfiguration configuration)
         {
             m_client = client;
             m_configuration = configuration;
+        }
+
+        public void SetChannel(DiscordSocketClient client, string channelID)
+        {
+            m_channel = Channels.Find(client, channelID, "server");
+        }
+
+        /// <summary>
+        /// Tell the server channel the server has come up or gone down, if one is set.
+        /// </summary>
+        private async Task Announce(string message)
+        {
+            if (m_channel == null)
+            {
+                return;
+            }
+            try
+            {
+                await m_channel.SendMessageAsync(message);
+            }
+            catch (Exception exception)
+            {
+                // The server itself is up or down either way, so a failed notification isn't a
+                // failed start or stop
+                DiscordError.Log($"post '{message}' to the server channel", exception);
+            }
         }
 
         public delegate Task PlayerJoined(Player player);
@@ -280,7 +307,7 @@ namespace zomboi
             }
         }
 
-        public bool Attach()
+        public async Task<bool> Attach()
         {
             // On windows I'm not yet sure what process name will find the server
             // As "ProjectZomboid64" is the actual game client so causes issues
@@ -292,6 +319,7 @@ namespace zomboi
                 return false;
             }
             var existing = Process.GetProcessesByName("ProjectZomboid64");
+            var attached = false;
             try
             {
                 if (existing.Length > 1)
@@ -304,7 +332,7 @@ namespace zomboi
                     m_childProcess = false;
                     m_startTime = DateTime.Now;
                     Logger.Info("Attached to server process");
-                    return true;
+                    attached = true;
                 }
             }
             finally
@@ -314,10 +342,22 @@ namespace zomboi
                     process.Dispose();
                 }
             }
-            return false;
+
+            if (attached)
+            {
+                await Announce(":green_circle: Attached to the running server");
+            }
+            return attached;
         }
 
-        public async Task<bool> Start()
+        public Task<bool> Start()
+        {
+            return Start(announce: true);
+        }
+
+        /// <param name="announce">Whether to tell the server channel about it, which the first time
+        /// setup doesn't want as the server isn't up for anyone to join yet</param>
+        private async Task<bool> Start(bool announce)
         {
             if (IsRunning)
             {
@@ -381,6 +421,10 @@ namespace zomboi
             Logger.Info("Server started");
             await m_client.SetGameAsync("Project Zomboid");
             await m_client.SetStatusAsync(UserStatus.Online);
+            if (announce)
+            {
+                await Announce(":green_circle: Server started");
+            }
             return true;
         }
 
@@ -401,7 +445,14 @@ namespace zomboi
             }
         }
 
-        public async Task<bool> Stop()
+        public Task<bool> Stop()
+        {
+            return Stop(announce: true);
+        }
+
+        /// <param name="announce">Whether to tell the server channel about it, which the first time
+        /// setup doesn't want as nobody was told it started either</param>
+        private async Task<bool> Stop(bool announce)
         {
             if (!IsRunning || m_process == null)
             {
@@ -444,6 +495,10 @@ namespace zomboi
             m_childProcess = false;
             m_process.Dispose();
             m_process = null;
+            if (announce)
+            {
+                await Announce(":red_circle: Server stopped");
+            }
             return true;
         }
 
@@ -469,7 +524,7 @@ namespace zomboi
             m_passwordPrompt = new TaskCompletionSource();
             try
             {
-                if (!await Start() || m_process == null)
+                if (!await Start(announce: false) || m_process == null)
                 {
                     return false;
                 }
@@ -493,7 +548,7 @@ namespace zomboi
             // a half made server. Give up early if it dies rather than waiting out the whole timeout.
             await WaitFor(() => IsCreated || !IsRunning, ConfigWriteTimeout);
             var created = IsCreated;
-            await Stop();
+            await Stop(announce: false);
             if (!created)
             {
                 Logger.Error($"The server never wrote {ConfigPath}, so it isn't set up. Check server.log " +

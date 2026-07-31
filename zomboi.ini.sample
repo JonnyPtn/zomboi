@@ -9,6 +9,8 @@ users channel =
 chat channel = 
 # Skill notifications
 skill channel =
+# Server up and down notifications
+server channel =
 
 [server]
 # Optional, where the server is installed. Leave blank to use a "server" folder next to the bot,
