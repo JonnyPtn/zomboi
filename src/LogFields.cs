@@ -78,8 +78,7 @@ namespace zomboi
         }
 
         /// <summary>
-        /// A "(x,y,...)" position. The coordinates can come through fractional, so read them as floats.
-        /// Anything past the second is ignored.
+        /// A "(x,y,...)" position, which is how the player log writes one.
         /// </summary>
         public static bool TryReadPosition(string message, out Vector2 position)
         {
@@ -91,8 +90,18 @@ namespace zomboi
             }
             var close = message.IndexOf(')', open + 1);
             var end = close < 0 ? message.Length : close;
+            return TryReadCoordinates(message[(open + 1)..end], out position);
+        }
 
-            var parts = message[(open + 1)..end].Split(',', StringSplitOptions.TrimEntries);
+        /// <summary>
+        /// A bare "x,y,..." coordinate list, which is what the perk log has in its position field. The
+        /// coordinates can come through fractional, so read them as floats. Anything past the second is
+        /// ignored - the third looks to be the floor they're on.
+        /// </summary>
+        public static bool TryReadCoordinates(string coordinates, out Vector2 position)
+        {
+            position = new Vector2();
+            var parts = coordinates.Split(',', StringSplitOptions.TrimEntries);
             if (parts.Length < 2)
             {
                 return false;
@@ -104,6 +113,18 @@ namespace zomboi
             }
             position = new Vector2(x, y);
             return true;
+        }
+
+        /// <summary>
+        /// The "[Hours Survived: n]" the perk log puts on the end of most of its lines, which is how
+        /// long the player's current character has been alive in game rather than how long they've
+        /// been playing.
+        /// </summary>
+        public static bool TryReadHoursSurvived(string message, out int hours)
+        {
+            hours = 0;
+            return TryReadField(message, "Hours Survived:", "]", out var value) &&
+                int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out hours);
         }
     }
 }

@@ -145,3 +145,65 @@ public class TryReadPositionTests
         Assert.False(LogFields.TryReadPosition(message, out _));
     }
 }
+
+public class TryReadCoordinatesTests
+{
+    [Fact]
+    public void ReadsThePositionFieldOfAPerkLine()
+    {
+        Assert.True(LogFields.TryReadCoordinates("10637,10267,0", out var position));
+        Assert.Equal(new Vector2(10637, 10267), position);
+    }
+
+    [Fact]
+    public void IgnoresSpacesBetweenTheCoordinates()
+    {
+        Assert.True(LogFields.TryReadCoordinates("10637, 10267, 0", out var position));
+        Assert.Equal(new Vector2(10637, 10267), position);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("10637")]
+    [InlineData("Login")]
+    public void FailsWithoutTwoCoordinates(string coordinates)
+    {
+        Assert.False(LogFields.TryReadCoordinates(coordinates, out _));
+    }
+}
+
+public class TryReadHoursSurvivedTests
+{
+    [Fact]
+    public void ReadsTheHoursOffALoginLine()
+    {
+        Assert.True(LogFields.TryReadHoursSurvived(
+            "[76561198021332810][Bob][10637,10267,0][Login][Hours Survived: 33].", out var hours));
+        Assert.Equal(33, hours);
+    }
+
+    [Fact]
+    public void ReadsTheHoursOffALevelChangedLine()
+    {
+        Assert.True(LogFields.TryReadHoursSurvived(
+            "[76561][Bob][10637,10267,0][Level Changed][Woodwork][2][Hours Survived: 35].", out var hours));
+        Assert.Equal(35, hours);
+    }
+
+    [Fact]
+    public void ReadsAFreshCharacter()
+    {
+        Assert.True(LogFields.TryReadHoursSurvived(
+            "[76561][Bob][10919,10132,0][Created Player 1][Hours Survived: 0].", out var hours));
+        Assert.Equal(0, hours);
+    }
+
+    [Theory]
+    [InlineData("[76561][Bob][10925,10054,0][SRJ START READING].")]
+    [InlineData("[76561][Bob][10925,10054,0][Hours Survived: many].")]
+    [InlineData("[76561][Bob][10925,10054,0][Hours Survived: 33")]
+    public void FailsWithoutAnHourCount(string message)
+    {
+        Assert.False(LogFields.TryReadHoursSurvived(message, out _));
+    }
+}

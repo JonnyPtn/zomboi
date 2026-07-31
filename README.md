@@ -26,7 +26,7 @@ Everything is a slash command, so start typing `/` and discord will list them. R
 
 | Command | Admin only | What it does |
 | --- | --- | --- |
-| `/player list` | | Who's currently connected, with when they were last seen and where they were |
+| `/player list` | | Who's currently connected, when they were last seen, a map link to where they were, and how long their character has survived |
 | `/player skills <name>` | | Every skill the bot has seen that player level, and what level they're at |
 
 Player info comes from the logs, so it covers anyone the bot has watched play rather than everyone who has ever been on the server.
