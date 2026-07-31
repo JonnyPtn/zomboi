@@ -21,6 +21,8 @@ namespace zomboi
         // after they've died and made a new one
         private const string LoginEvent = "Login";
         private const string CreatedPlayerEvent = "Created Player";
+        // Written as a character dies, with the time they'd survived still on it
+        private const string DiedEvent = "Died";
 
         public PerkListener(Server server) : base("*PerkLog.txt")
         {
@@ -67,6 +69,14 @@ namespace zomboi
             // the logs at all because of these lines
             if (happened == LoginEvent || happened.StartsWith(CreatedPlayerEvent, StringComparison.Ordinal))
             {
+                return true;
+            }
+
+            // The player log has a line for the same death, but this is the only one that says how long
+            // the character had survived, so the death is reported from here while that number is to hand
+            if (happened == DiedEvent)
+            {
+                await m_server.PlayerDied(player, line.TimeStamp);
                 return true;
             }
 

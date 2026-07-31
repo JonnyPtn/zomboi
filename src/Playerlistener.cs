@@ -12,6 +12,7 @@ namespace zomboi
         {
             m_server = server;
             m_server.OnPlayerJoined += OnPlayerAdded;
+            m_server.OnPlayerDied += OnPlayerDeath;
         }
 
         public async Task OnPlayerAdded(Player player)
@@ -28,6 +29,22 @@ namespace zomboi
             var hours = await m_server.WaitForHoursSurvived(player);
             var survived = hours == null ? string.Empty : $", {Survival.Describe(hours.Value)} survived";
             await m_channel.SendMessageAsync($":wave: {player.Name} has joined{where}{survived}");
+        }
+
+        public async Task OnPlayerDeath(Player player)
+        {
+            if (m_channel == null)
+            {
+                Logger.Warn("Player notification channel not set");
+                return;
+            }
+            // Where they fell is the part worth looking at, and it's on the same log line the death
+            // came from, along with how long they'd lasted - so unlike a join there's nothing to wait for
+            var where = player.HasPosition ? $" at {Map.Link(player.Position)}" : string.Empty;
+            var survived = player.HoursSurvived == null
+                ? string.Empty
+                : $", {Survival.Describe(player.HoursSurvived.Value)} survived";
+            await m_channel.SendMessageAsync($":skull: {player.Name} died{where}{survived}");
         }
 
         public void SetChannel(DiscordSocketClient client, string channelID)
@@ -69,6 +86,13 @@ namespace zomboi
                 {
                     await m_channel.SendMessageAsync($":person_running: {name} has left");
                 }
+                return true;
+            }
+            else if (line.Message.Contains("died"))
+            {
+                // Handled, but from the perk log rather than here - see PerkListener. This line knows
+                // whether it was a pvp death and that one doesn't, so it's the one to come back to if
+                // that's ever worth reporting.
                 return true;
             }
             return false;
