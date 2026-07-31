@@ -34,6 +34,17 @@ namespace zomboi
             {
                 await FollowupAsync("Server started", ephemeral: true);
             }
+            // The two things the server won't start without are worth saying out loud, as the fix
+            // is another command rather than anything to go digging in the bot's output for
+            else if (!m_server.IsInstalled)
+            {
+                await FollowupAsync("There's no server installed yet, so use `/zomboi install` first", ephemeral: true);
+            }
+            else if (!m_server.IsCreated)
+            {
+                await FollowupAsync("The server hasn't been set up yet, so starting it would only leave it " +
+                    "waiting for an administrator password. Use `/zomboi create <password>` first.", ephemeral: true);
+            }
             else
             {
                 await FollowupAsync("Server start failed, check the bot's output for why", ephemeral: true);
